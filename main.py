@@ -27,7 +27,7 @@ def run_pipeline(submission_path):
         f"with {len(docs)} document(s)"
     )
 
-    # 2. Extract structured risk profile via Claude
+    # 2. Extract structured risk profile 
     log.info("Extracting risk profile...")
     profile = extract_profile(submission, docs)
     if "error" in profile:
@@ -55,8 +55,10 @@ def run_pipeline(submission_path):
         model=profile.pop("_model", "unknown"),
         system_fingerprint=profile.pop("_fp", None),
     )
+    profile.pop("_prompt_hash", None)
+    profile.pop("_extraction_params", None)
 
-    # 6. Build and validate reviewer-ready result
+    # 6. Build and validate reviewer-ready result (profile is clean of metadata now)
     result = AssessmentResult(
         submission_id=submission["submission_id"],
         applicant_name=submission.get("applicant_name"),
@@ -70,11 +72,7 @@ def run_pipeline(submission_path):
         activities_undeclared=profile.get("activities_undeclared", []),
         followup_questions=questions,
         key_findings=profile.get("key_findings", []),
-        review=ReviewerOverride(
-            reviewer_id="",
-            reviewed_at=datetime.now(timezone.utc),
-            status=ReviewStatus.PENDING,
-        ),
+        review=ReviewerOverride(status=ReviewStatus.PENDING),
     )
     log.info("Output validated against schema")
 

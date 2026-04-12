@@ -18,11 +18,24 @@ class ReviewStatus(str, Enum):
 
 
 class ReviewerOverride(BaseModel):
-    reviewer_id: str
-    reviewed_at: datetime
     status: ReviewStatus
-    override_level: Optional[AuthorizationLevel] = None  # populated only when OVERRIDDEN
+    reviewer_id: Optional[str] = None      # set when a human accepts or overrides
+    reviewed_at: Optional[datetime] = None  # set when a human accepts or overrides
+    override_level: Optional[AuthorizationLevel] = None  # set only when OVERRIDDEN
     notes: Optional[str] = None
+
+    @validator("reviewer_id", always=True)
+    def require_reviewer_when_actioned(cls, v, values):
+        status = values.get("status")
+        if status in (ReviewStatus.ACCEPTED, ReviewStatus.OVERRIDDEN) and not v:
+            raise ValueError("reviewer_id is required when status is ACCEPTED or OVERRIDDEN")
+        return v
+
+    @validator("override_level", always=True)
+    def require_level_when_overridden(cls, v, values):
+        if values.get("status") == ReviewStatus.OVERRIDDEN and v is None:
+            raise ValueError("override_level is required when status is OVERRIDDEN")
+        return v
 
 
 class OwnershipType(str, Enum):

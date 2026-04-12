@@ -1,6 +1,10 @@
-from openai import OpenAI
+from openai import OpenAI, AuthenticationError, APIConnectionError, RateLimitError
 from dotenv import load_dotenv
+import hashlib
+import logging
 import json
+
+log = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -58,19 +62,31 @@ Classification rules:
 - has_criminal_flag: true if any criminal history or sanctions mentioned
 - missing_docs: list documents that are expected for this type of firm but absent or incomplete"""
 
-    response = _get_client().chat.completions.create(
-        model=MODEL,
-        messages=[{"role": "user", "content": prompt}],
-        response_format={"type": "json_object"},
-        temperature=0,
-        seed=SEED,
-    )
+    try:
+        response = _get_client().chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+            temperature=0,
+            seed=SEED,
+        )
+    except AuthenticationError:
+        log.error("OpenAI authentication failed — check OPENAI_API_KEY")
+        return {"error": "missing_or_invalid_api_key"}
+    except APIConnectionError as e:
+        log.error(f"OpenAI connection error: {e}")
+        return {"error": "llm_connection_error"}
+    except RateLimitError:
+        log.error("OpenAI rate limit exceeded")
+        return {"error": "llm_rate_limit"}
 
     content = response.choices[0].message.content
     try:
         profile = json.loads(content)
-        profile["_model"] = response.model  # actual resolved model version from API
-        profile["_fp"] = response.system_fingerprint  # backend routing fingerprint
+        profile["_model"] = response.model
+        profile["_fp"] = response.system_fingerprint
+        profile["_prompt_hash"] = hashlib.sha256(prompt.encode()).hexdigest()
+        profile["_extraction_params"] = {"temperature": 0, "seed": SEED}
         return profile
     except json.JSONDecodeError:
-        return {"error": content}
+        return {"error": f"llm_invalid_json: {content[:200]}"}
