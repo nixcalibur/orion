@@ -1,0 +1,21 @@
+{
+  "submission_id": "sample_missing",
+  "applicant_name": "Nexus Payments Ltd",
+  "jurisdiction": "Malta",
+  "declared_activities": [
+    "payment processing"
+  ],
+  "incorporation_date": "2021-09-10",
+  "key_personnel": [
+    {
+      "name": "Marco Russo",
+      "role": "CEO",
+      "nationality": "IT"
+    }
+  ],
+  "document_refs": [
+    "dataset/sample_missing/docs/aml_policy.txt",
+    "dataset/sample_missing/docs/ownership.txt",
+    "dataset/sample_missing/docs/financials.txt"
+  ]
+}

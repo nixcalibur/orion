@@ -4,7 +4,17 @@ import json
 
 load_dotenv()
 
-client = OpenAI()
+MODEL = "gpt-4o-mini-2024-07-18"
+SEED = 42
+
+_client = None
+
+
+def _get_client():
+    global _client
+    if _client is None:
+        _client = OpenAI()
+    return _client
 
 
 def extract_profile(submission, docs):
@@ -48,14 +58,19 @@ Classification rules:
 - has_criminal_flag: true if any criminal history or sanctions mentioned
 - missing_docs: list documents that are expected for this type of firm but absent or incomplete"""
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
+    response = _get_client().chat.completions.create(
+        model=MODEL,
         messages=[{"role": "user", "content": prompt}],
         response_format={"type": "json_object"},
+        temperature=0,
+        seed=SEED,
     )
 
     content = response.choices[0].message.content
     try:
-        return json.loads(content)
+        profile = json.loads(content)
+        profile["_model"] = response.model  # actual resolved model version from API
+        profile["_fp"] = response.system_fingerprint  # backend routing fingerprint
+        return profile
     except json.JSONDecodeError:
         return {"error": content}

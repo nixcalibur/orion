@@ -1,0 +1,11 @@
+FINANCIAL STATEMENTS - Nexus Payments Ltd (2023)
+
+Total Assets: EUR 2,100,000
+Total Liabilities: EUR 1,800,000
+Equity: EUR 300,000
+Revenue: EUR 890,000
+Net Profit: EUR 42,000
+Capital Adequacy Ratio: 9.1% (marginally above minimum threshold)
+
+Note: Auditor flagged going-concern uncertainty due to tight capital headroom.
+No formal credit facility in place. Liquidity buffer covers 45 days of operations.

@@ -6,9 +6,9 @@ from datetime import datetime, timezone
 from ingest import ingest
 from extract import extract_profile
 from score import score_profile, get_authorization_level, generate_followup_questions
-from schema import AssessmentResult
-from audit import write_audit_record
-from deliver import deliver
+from schema import AssessmentResult, ReviewerOverride, ReviewStatus
+from audit import write_audit_record, _hash_inputs
+from deliver import deliver, DeliveryError
 
 logging.basicConfig(
     level=logging.INFO,
@@ -52,7 +52,8 @@ def run_pipeline(submission_path):
         composite=composite,
         authorization=authorization,
         followup_questions=questions,
-        model="gpt-4o-mini",
+        model=profile.pop("_model", "unknown"),
+        system_fingerprint=profile.pop("_fp", None),
     )
 
     # 6. Build and validate reviewer-ready result
@@ -69,11 +70,20 @@ def run_pipeline(submission_path):
         activities_undeclared=profile.get("activities_undeclared", []),
         followup_questions=questions,
         key_findings=profile.get("key_findings", []),
+        review=ReviewerOverride(
+            reviewer_id="",
+            reviewed_at=datetime.now(timezone.utc),
+            status=ReviewStatus.PENDING,
+        ),
     )
     log.info("Output validated against schema")
 
     # 7. Deliver to external review API
-    deliver(result.json())
+    input_hash = _hash_inputs(submission, docs)
+    try:
+        deliver(result.json(), submission_id=submission["submission_id"], input_hash=input_hash)
+    except DeliveryError as e:
+        log.error(f"Delivery failed | retriable={e.retriable} status={e.status_code} error={e}")
 
     return result
 

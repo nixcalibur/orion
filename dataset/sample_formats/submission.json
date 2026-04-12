@@ -1,0 +1,32 @@
+{
+  "submission_id": "sample_formats",
+  "applicant_name": "VaultBridge Financial Ltd",
+  "jurisdiction": "Ireland",
+  "declared_activities": [
+    "payment processing",
+    "crypto-asset custody"
+  ],
+  "incorporation_date": "2020-03-15",
+  "key_personnel": [
+    {
+      "name": "Erik Lindqvist",
+      "role": "CEO",
+      "nationality": "SE"
+    },
+    {
+      "name": "Aisha Nkrumah",
+      "role": "CFO",
+      "nationality": "GH"
+    },
+    {
+      "name": "James Okafor",
+      "role": "MLRO",
+      "nationality": "NG"
+    }
+  ],
+  "document_refs": [
+    "dataset/sample_formats/docs/aml_policy.pdf",
+    "dataset/sample_formats/docs/ownership.docx",
+    "dataset/sample_formats/docs/financials.xlsx"
+  ]
+}

@@ -25,8 +25,8 @@
     }
   ],
   "document_refs": [
-    "/Users/sduphy/Documents/stuff/projects/orion/dataset/fc3e4000/docs/aml_policy.txt",
-    "/Users/sduphy/Documents/stuff/projects/orion/dataset/fc3e4000/docs/financials.txt",
-    "/Users/sduphy/Documents/stuff/projects/orion/dataset/fc3e4000/docs/ownership.txt"
+    "dataset/fc3e4000/docs/aml_policy.txt",
+    "dataset/fc3e4000/docs/financials.txt",
+    "dataset/fc3e4000/docs/ownership.txt"
   ]
 }

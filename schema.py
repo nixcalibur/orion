@@ -11,6 +11,20 @@ class AuthorizationLevel(str, Enum):
     REJECT = "REJECT"
 
 
+class ReviewStatus(str, Enum):
+    PENDING = "PENDING"
+    ACCEPTED = "ACCEPTED"
+    OVERRIDDEN = "OVERRIDDEN"
+
+
+class ReviewerOverride(BaseModel):
+    reviewer_id: str
+    reviewed_at: datetime
+    status: ReviewStatus
+    override_level: Optional[AuthorizationLevel] = None  # populated only when OVERRIDDEN
+    notes: Optional[str] = None
+
+
 class OwnershipType(str, Enum):
     clear = "clear"
     complex = "complex"
@@ -71,6 +85,7 @@ class AssessmentResult(BaseModel):
     activities_undeclared: List[str] = []
     followup_questions: List[str] = []
     key_findings: List[str] = []
+    review: Optional[ReviewerOverride] = None
 
     @validator("composite_score")
     def round_score(cls, v):

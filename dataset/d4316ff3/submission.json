@@ -27,8 +27,8 @@
     }
   ],
   "document_refs": [
-    "/Users/sduphy/Documents/stuff/projects/orion/dataset/d4316ff3/docs/aml_policy.txt",
-    "/Users/sduphy/Documents/stuff/projects/orion/dataset/d4316ff3/docs/financials.txt",
-    "/Users/sduphy/Documents/stuff/projects/orion/dataset/d4316ff3/docs/ownership.txt"
+    "dataset/d4316ff3/docs/aml_policy.txt",
+    "dataset/d4316ff3/docs/financials.txt",
+    "dataset/d4316ff3/docs/ownership.txt"
   ]
 }

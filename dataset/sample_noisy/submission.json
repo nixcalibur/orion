@@ -1,0 +1,26 @@
+{
+  "submission_id": "sample_noisy",
+  "applicant_name": "Meridian Trust Corp",
+  "jurisdiction": "Luxembourg",
+  "declared_activities": [
+    "fund administration",
+    "payment processing"
+  ],
+  "incorporation_date": "2018-06-01",
+  "key_personnel": [
+    {
+      "name": "Carlos Vega",
+      "role": "Director",
+      "nationality": "CH"
+    },
+    {
+      "name": "Fatima Al-Hassan",
+      "role": "MLRO",
+      "nationality": "AE"
+    }
+  ],
+  "document_refs": [
+    "dataset/sample_noisy/docs/terms_and_conditions.txt",
+    "dataset/sample_noisy/docs/aml_and_compliance.txt"
+  ]
+}

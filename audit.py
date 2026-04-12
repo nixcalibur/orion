@@ -24,6 +24,7 @@ def write_audit_record(
     authorization: str,
     followup_questions: list,
     model: str,
+    system_fingerprint: str = None,
 ):
     record = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -31,6 +32,7 @@ def write_audit_record(
         "applicant_name": submission.get("applicant_name"),
         "input_hash": _hash_inputs(submission, docs),
         "model": model,
+        "system_fingerprint": system_fingerprint,
         "extracted_profile": profile,
         "dimension_scores": dim_scores,
         "composite_score": composite,
