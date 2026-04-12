@@ -1,0 +1,32 @@
+{
+  "submission_id": "5ea09b60",
+  "applicant_name": "ZenithPay Holdings 41",
+  "jurisdiction": "Netherlands",
+  "declared_activities": [
+    "digital asset exchange",
+    "crypto-asset custody"
+  ],
+  "incorporation_date": "2021-05-01",
+  "key_personnel": [
+    {
+      "name": "Priya Sharma",
+      "role": "COO",
+      "nationality": "IN"
+    },
+    {
+      "name": "Boris Krasnov",
+      "role": "CFO",
+      "nationality": "RU"
+    },
+    {
+      "name": "Clara Ng",
+      "role": "MLRO",
+      "nationality": "SG"
+    }
+  ],
+  "document_refs": [
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/5ea09b60/docs/aml_policy.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/5ea09b60/docs/financials.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/5ea09b60/docs/ownership.txt"
+  ]
+}

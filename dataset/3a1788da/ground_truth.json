@@ -1,0 +1,22 @@
+{
+  "submission_id": "3a1788da",
+  "expected_authorization_level": "DEFER",
+  "expected_composite_range": [
+    6.0,
+    8.0
+  ],
+  "profile": {
+    "ownership": "complex",
+    "aml_present": false,
+    "regulatory_history": "clean",
+    "cyber": "adequate",
+    "financial_health": "healthy",
+    "privacy": "compliant",
+    "has_pep": false,
+    "has_criminal_flag": false,
+    "missing_docs": [
+      "AML policy",
+      "MLRO appointment letter"
+    ]
+  }
+}

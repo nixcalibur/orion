@@ -1,0 +1,33 @@
+{
+  "submission_id": "bf94c9f9",
+  "applicant_name": "IronClad Finance 50",
+  "jurisdiction": "Ireland",
+  "declared_activities": [
+    "high-risk digital infrastructure",
+    "payment processing",
+    "crypto-asset lending"
+  ],
+  "incorporation_date": "2022-07-01",
+  "key_personnel": [
+    {
+      "name": "Ahmed Al-Rashid",
+      "role": "CTO",
+      "nationality": "AE"
+    },
+    {
+      "name": "Boris Krasnov",
+      "role": "CFO",
+      "nationality": "RU"
+    },
+    {
+      "name": "Priya Sharma",
+      "role": "COO",
+      "nationality": "IN"
+    }
+  ],
+  "document_refs": [
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/bf94c9f9/docs/aml_policy.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/bf94c9f9/docs/financials.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/bf94c9f9/docs/ownership.txt"
+  ]
+}

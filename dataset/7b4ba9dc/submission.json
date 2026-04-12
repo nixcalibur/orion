@@ -1,0 +1,33 @@
+{
+  "submission_id": "7b4ba9dc",
+  "applicant_name": "ClearLedger Systems 39",
+  "jurisdiction": "United Kingdom",
+  "declared_activities": [
+    "e-money issuance",
+    "payment processing"
+  ],
+  "incorporation_date": "2020-07-01",
+  "key_personnel": [
+    {
+      "name": "Clara Ng",
+      "role": "MLRO",
+      "nationality": "SG",
+      "pep_status": "declared_pep"
+    },
+    {
+      "name": "Sofia Andersen",
+      "role": "CEO",
+      "nationality": "DK"
+    },
+    {
+      "name": "Ahmed Al-Rashid",
+      "role": "CTO",
+      "nationality": "AE"
+    }
+  ],
+  "document_refs": [
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/7b4ba9dc/docs/aml_policy.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/7b4ba9dc/docs/financials.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/7b4ba9dc/docs/ownership.txt"
+  ]
+}

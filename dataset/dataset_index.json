@@ -1,0 +1,509 @@
+[
+  {
+    "submission_id": "fc3e4000",
+    "submission_path": "dataset/fc3e4000/submission.json",
+    "ground_truth": {
+      "submission_id": "fc3e4000",
+      "expected_authorization_level": "DEFER",
+      "expected_composite_range": [
+        6.0,
+        8.0
+      ],
+      "profile": {
+        "ownership": "complex",
+        "aml_present": false,
+        "regulatory_history": "clean",
+        "cyber": "adequate",
+        "financial_health": "healthy",
+        "privacy": "compliant",
+        "has_pep": false,
+        "has_criminal_flag": false,
+        "missing_docs": [
+          "AML policy",
+          "MLRO appointment letter"
+        ]
+      }
+    }
+  },
+  {
+    "submission_id": "230dbdd5",
+    "submission_path": "dataset/230dbdd5/submission.json",
+    "ground_truth": {
+      "submission_id": "230dbdd5",
+      "expected_authorization_level": "CONDITIONAL",
+      "expected_composite_range": [
+        4.0,
+        6.5
+      ],
+      "profile": {
+        "ownership": "clear",
+        "aml_present": true,
+        "regulatory_history": "minor_issues",
+        "cyber": "adequate",
+        "financial_health": "healthy",
+        "privacy": "compliant",
+        "has_pep": true,
+        "has_criminal_flag": false,
+        "missing_docs": [
+          "PEP enhanced due diligence evidence"
+        ]
+      }
+    }
+  },
+  {
+    "submission_id": "4f99ba8c",
+    "submission_path": "dataset/4f99ba8c/submission.json",
+    "ground_truth": {
+      "submission_id": "4f99ba8c",
+      "expected_authorization_level": "CONDITIONAL",
+      "expected_composite_range": [
+        4.0,
+        6.5
+      ],
+      "profile": {
+        "ownership": "clear",
+        "aml_present": true,
+        "regulatory_history": "minor_issues",
+        "cyber": "adequate",
+        "financial_health": "healthy",
+        "privacy": "compliant",
+        "has_pep": true,
+        "has_criminal_flag": false,
+        "missing_docs": [
+          "PEP enhanced due diligence evidence"
+        ]
+      }
+    }
+  },
+  {
+    "submission_id": "771f242d",
+    "submission_path": "dataset/771f242d/submission.json",
+    "ground_truth": {
+      "submission_id": "771f242d",
+      "expected_authorization_level": "REJECT",
+      "expected_composite_range": [
+        8.0,
+        10.0
+      ],
+      "profile": {
+        "ownership": "opaque",
+        "aml_present": false,
+        "regulatory_history": "major_issues",
+        "cyber": "weak",
+        "financial_health": "distressed",
+        "privacy": "partial",
+        "has_pep": false,
+        "has_criminal_flag": false,
+        "missing_docs": [
+          "AML policy"
+        ]
+      }
+    }
+  },
+  {
+    "submission_id": "3a1788da",
+    "submission_path": "dataset/3a1788da/submission.json",
+    "ground_truth": {
+      "submission_id": "3a1788da",
+      "expected_authorization_level": "DEFER",
+      "expected_composite_range": [
+        6.0,
+        8.0
+      ],
+      "profile": {
+        "ownership": "complex",
+        "aml_present": false,
+        "regulatory_history": "clean",
+        "cyber": "adequate",
+        "financial_health": "healthy",
+        "privacy": "compliant",
+        "has_pep": false,
+        "has_criminal_flag": false,
+        "missing_docs": [
+          "AML policy",
+          "MLRO appointment letter"
+        ]
+      }
+    }
+  },
+  {
+    "submission_id": "e272b3cb",
+    "submission_path": "dataset/e272b3cb/submission.json",
+    "ground_truth": {
+      "submission_id": "e272b3cb",
+      "expected_authorization_level": "CONDITIONAL",
+      "expected_composite_range": [
+        4.0,
+        6.0
+      ],
+      "profile": {
+        "ownership": "complex",
+        "aml_present": true,
+        "regulatory_history": "clean",
+        "cyber": "adequate",
+        "financial_health": "stressed",
+        "privacy": "partial",
+        "has_pep": false,
+        "has_criminal_flag": false,
+        "missing_docs": [
+          "penetration test report"
+        ]
+      }
+    }
+  },
+  {
+    "submission_id": "d4316ff3",
+    "submission_path": "dataset/d4316ff3/submission.json",
+    "ground_truth": {
+      "submission_id": "d4316ff3",
+      "expected_authorization_level": "CONDITIONAL",
+      "expected_composite_range": [
+        4.0,
+        6.5
+      ],
+      "profile": {
+        "ownership": "clear",
+        "aml_present": true,
+        "regulatory_history": "minor_issues",
+        "cyber": "adequate",
+        "financial_health": "healthy",
+        "privacy": "compliant",
+        "has_pep": true,
+        "has_criminal_flag": false,
+        "missing_docs": [
+          "PEP enhanced due diligence evidence"
+        ]
+      }
+    }
+  },
+  {
+    "submission_id": "5ea09b60",
+    "submission_path": "dataset/5ea09b60/submission.json",
+    "ground_truth": {
+      "submission_id": "5ea09b60",
+      "expected_authorization_level": "DEFER",
+      "expected_composite_range": [
+        5.5,
+        8.0
+      ],
+      "profile": {
+        "ownership": "opaque",
+        "aml_present": true,
+        "regulatory_history": "minor_issues",
+        "cyber": "weak",
+        "financial_health": "stressed",
+        "privacy": "partial",
+        "has_pep": false,
+        "has_criminal_flag": false,
+        "missing_docs": [
+          "beneficial ownership chart",
+          "audited financials"
+        ]
+      }
+    }
+  },
+  {
+    "submission_id": "7b4ba9dc",
+    "submission_path": "dataset/7b4ba9dc/submission.json",
+    "ground_truth": {
+      "submission_id": "7b4ba9dc",
+      "expected_authorization_level": "CONDITIONAL",
+      "expected_composite_range": [
+        4.0,
+        6.5
+      ],
+      "profile": {
+        "ownership": "clear",
+        "aml_present": true,
+        "regulatory_history": "minor_issues",
+        "cyber": "adequate",
+        "financial_health": "healthy",
+        "privacy": "compliant",
+        "has_pep": true,
+        "has_criminal_flag": false,
+        "missing_docs": [
+          "PEP enhanced due diligence evidence"
+        ]
+      }
+    }
+  },
+  {
+    "submission_id": "bf94c9f9",
+    "submission_path": "dataset/bf94c9f9/submission.json",
+    "ground_truth": {
+      "submission_id": "bf94c9f9",
+      "expected_authorization_level": "REJECT",
+      "expected_composite_range": [
+        8.0,
+        10.0
+      ],
+      "profile": {
+        "ownership": "opaque",
+        "aml_present": false,
+        "regulatory_history": "major_issues",
+        "cyber": "weak",
+        "financial_health": "distressed",
+        "privacy": "partial",
+        "has_pep": false,
+        "has_criminal_flag": false,
+        "missing_docs": [
+          "AML policy"
+        ]
+      }
+    }
+  },
+  {
+    "submission_id": "bf5e875f",
+    "submission_path": "dataset/bf5e875f/submission.json",
+    "ground_truth": {
+      "submission_id": "bf5e875f",
+      "expected_authorization_level": "CONDITIONAL",
+      "expected_composite_range": [
+        4.0,
+        6.0
+      ],
+      "profile": {
+        "ownership": "complex",
+        "aml_present": true,
+        "regulatory_history": "clean",
+        "cyber": "adequate",
+        "financial_health": "stressed",
+        "privacy": "partial",
+        "has_pep": false,
+        "has_criminal_flag": false,
+        "missing_docs": [
+          "penetration test report"
+        ]
+      }
+    }
+  },
+  {
+    "submission_id": "4e16ca7c",
+    "submission_path": "dataset/4e16ca7c/submission.json",
+    "ground_truth": {
+      "submission_id": "4e16ca7c",
+      "expected_authorization_level": "REJECT",
+      "expected_composite_range": [
+        8.0,
+        10.0
+      ],
+      "profile": {
+        "ownership": "opaque",
+        "aml_present": false,
+        "regulatory_history": "major_issues",
+        "cyber": "weak",
+        "financial_health": "distressed",
+        "privacy": "partial",
+        "has_pep": false,
+        "has_criminal_flag": false,
+        "missing_docs": [
+          "AML policy"
+        ]
+      }
+    }
+  },
+  {
+    "submission_id": "152d2302",
+    "submission_path": "dataset/152d2302/submission.json",
+    "ground_truth": {
+      "submission_id": "152d2302",
+      "expected_authorization_level": "CONDITIONAL",
+      "expected_composite_range": [
+        4.0,
+        6.5
+      ],
+      "profile": {
+        "ownership": "clear",
+        "aml_present": true,
+        "regulatory_history": "minor_issues",
+        "cyber": "adequate",
+        "financial_health": "healthy",
+        "privacy": "compliant",
+        "has_pep": true,
+        "has_criminal_flag": false,
+        "missing_docs": [
+          "PEP enhanced due diligence evidence"
+        ]
+      }
+    }
+  },
+  {
+    "submission_id": "974cff34",
+    "submission_path": "dataset/974cff34/submission.json",
+    "ground_truth": {
+      "submission_id": "974cff34",
+      "expected_authorization_level": "DEFER",
+      "expected_composite_range": [
+        6.0,
+        8.0
+      ],
+      "profile": {
+        "ownership": "complex",
+        "aml_present": false,
+        "regulatory_history": "clean",
+        "cyber": "adequate",
+        "financial_health": "healthy",
+        "privacy": "compliant",
+        "has_pep": false,
+        "has_criminal_flag": false,
+        "missing_docs": [
+          "AML policy",
+          "MLRO appointment letter"
+        ]
+      }
+    }
+  },
+  {
+    "submission_id": "f9c225e0",
+    "submission_path": "dataset/f9c225e0/submission.json",
+    "ground_truth": {
+      "submission_id": "f9c225e0",
+      "expected_authorization_level": "CONDITIONAL",
+      "expected_composite_range": [
+        4.0,
+        6.5
+      ],
+      "profile": {
+        "ownership": "clear",
+        "aml_present": true,
+        "regulatory_history": "minor_issues",
+        "cyber": "adequate",
+        "financial_health": "healthy",
+        "privacy": "compliant",
+        "has_pep": true,
+        "has_criminal_flag": false,
+        "missing_docs": [
+          "PEP enhanced due diligence evidence"
+        ]
+      }
+    }
+  },
+  {
+    "submission_id": "50f4e038",
+    "submission_path": "dataset/50f4e038/submission.json",
+    "ground_truth": {
+      "submission_id": "50f4e038",
+      "expected_authorization_level": "CONDITIONAL",
+      "expected_composite_range": [
+        4.0,
+        6.5
+      ],
+      "profile": {
+        "ownership": "clear",
+        "aml_present": true,
+        "regulatory_history": "minor_issues",
+        "cyber": "adequate",
+        "financial_health": "healthy",
+        "privacy": "compliant",
+        "has_pep": true,
+        "has_criminal_flag": false,
+        "missing_docs": [
+          "PEP enhanced due diligence evidence"
+        ]
+      }
+    }
+  },
+  {
+    "submission_id": "32670b83",
+    "submission_path": "dataset/32670b83/submission.json",
+    "ground_truth": {
+      "submission_id": "32670b83",
+      "expected_authorization_level": "CONDITIONAL",
+      "expected_composite_range": [
+        4.0,
+        6.0
+      ],
+      "profile": {
+        "ownership": "complex",
+        "aml_present": true,
+        "regulatory_history": "clean",
+        "cyber": "adequate",
+        "financial_health": "stressed",
+        "privacy": "partial",
+        "has_pep": false,
+        "has_criminal_flag": false,
+        "missing_docs": [
+          "penetration test report"
+        ]
+      }
+    }
+  },
+  {
+    "submission_id": "b4753ec8",
+    "submission_path": "dataset/b4753ec8/submission.json",
+    "ground_truth": {
+      "submission_id": "b4753ec8",
+      "expected_authorization_level": "DEFER",
+      "expected_composite_range": [
+        5.5,
+        8.0
+      ],
+      "profile": {
+        "ownership": "opaque",
+        "aml_present": true,
+        "regulatory_history": "minor_issues",
+        "cyber": "weak",
+        "financial_health": "stressed",
+        "privacy": "partial",
+        "has_pep": false,
+        "has_criminal_flag": false,
+        "missing_docs": [
+          "beneficial ownership chart",
+          "audited financials"
+        ]
+      }
+    }
+  },
+  {
+    "submission_id": "05b74dcc",
+    "submission_path": "dataset/05b74dcc/submission.json",
+    "ground_truth": {
+      "submission_id": "05b74dcc",
+      "expected_authorization_level": "DEFER",
+      "expected_composite_range": [
+        5.5,
+        8.0
+      ],
+      "profile": {
+        "ownership": "opaque",
+        "aml_present": true,
+        "regulatory_history": "minor_issues",
+        "cyber": "weak",
+        "financial_health": "stressed",
+        "privacy": "partial",
+        "has_pep": false,
+        "has_criminal_flag": false,
+        "missing_docs": [
+          "beneficial ownership chart",
+          "audited financials"
+        ]
+      }
+    }
+  },
+  {
+    "submission_id": "db949d02",
+    "submission_path": "dataset/db949d02/submission.json",
+    "ground_truth": {
+      "submission_id": "db949d02",
+      "expected_authorization_level": "DEFER",
+      "expected_composite_range": [
+        6.0,
+        8.0
+      ],
+      "profile": {
+        "ownership": "complex",
+        "aml_present": false,
+        "regulatory_history": "clean",
+        "cyber": "adequate",
+        "financial_health": "healthy",
+        "privacy": "compliant",
+        "has_pep": false,
+        "has_criminal_flag": false,
+        "missing_docs": [
+          "AML policy",
+          "MLRO appointment letter"
+        ]
+      }
+    }
+  }
+]

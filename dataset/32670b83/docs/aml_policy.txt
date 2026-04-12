@@ -1,0 +1,19 @@
+OpenVault Technologies 49 – AML/KYC Policy (Summary)
+
+1. OWNERSHIP
+OpenVault Technologies 49 is owned via a Luxembourg holding structure. UBO is identified but ownership chain has 3 layers.
+
+2. AML CONTROLS
+Basic transaction monitoring in place. Penetration testing scheduled for Q3.
+Customer Due Diligence applied to all onboarding.
+Enhanced Due Diligence for transactions > EUR 10,000.
+
+3. PEP SCREENING
+No politically exposed persons have been identified among key personnel or beneficial owners.
+
+4. REGULATORY HISTORY
+No prior regulatory investigations, fines, or enforcement actions.
+
+
+5. DATA PRIVACY
+GDPR compliance programme underway. DPIA not yet completed.

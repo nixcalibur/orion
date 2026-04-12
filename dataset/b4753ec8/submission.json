@@ -1,0 +1,32 @@
+{
+  "submission_id": "b4753ec8",
+  "applicant_name": "VaultBridge Finance 78",
+  "jurisdiction": "France",
+  "declared_activities": [
+    "payment processing",
+    "crypto-asset custody"
+  ],
+  "incorporation_date": "2017-11-01",
+  "key_personnel": [
+    {
+      "name": "Ahmed Al-Rashid",
+      "role": "CTO",
+      "nationality": "AE"
+    },
+    {
+      "name": "Boris Krasnov",
+      "role": "CFO",
+      "nationality": "RU"
+    },
+    {
+      "name": "Priya Sharma",
+      "role": "COO",
+      "nationality": "IN"
+    }
+  ],
+  "document_refs": [
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/b4753ec8/docs/aml_policy.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/b4753ec8/docs/financials.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/b4753ec8/docs/ownership.txt"
+  ]
+}

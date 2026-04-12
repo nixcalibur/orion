@@ -1,0 +1,19 @@
+AxisGuard Digital 10 – AML/KYC Policy (Summary)
+
+1. OWNERSHIP
+AxisGuard Digital 10 is wholly owned by its two founders (60/40 split). Full UBO documentation provided.
+
+2. AML CONTROLS
+Basic transaction monitoring in place. Penetration testing scheduled for Q3.
+Customer Due Diligence applied to all onboarding.
+Enhanced Due Diligence for transactions > EUR 10,000.
+
+3. PEP SCREENING
+PEP screening is performed via World-Check. Enhanced Due Diligence is applied to all PEP relationships. CEO Alice Fontaine has been identified as a PEP due to prior government advisory role; EDD file on record.
+
+4. REGULATORY HISTORY
+A minor AML procedural warning was issued by the Estonian FSA in 2022. Remediation completed.
+
+
+5. DATA PRIVACY
+GDPR-compliant. DPIA completed January 2024. DPO appointed.

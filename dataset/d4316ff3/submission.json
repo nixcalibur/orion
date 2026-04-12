@@ -1,0 +1,34 @@
+{
+  "submission_id": "d4316ff3",
+  "applicant_name": "OpenVault Technologies 30",
+  "jurisdiction": "Cayman Islands",
+  "declared_activities": [
+    "e-money issuance",
+    "payment processing",
+    "crypto-asset custody"
+  ],
+  "incorporation_date": "2018-11-01",
+  "key_personnel": [
+    {
+      "name": "Clara Ng",
+      "role": "MLRO",
+      "nationality": "SG",
+      "pep_status": "declared_pep"
+    },
+    {
+      "name": "Sofia Andersen",
+      "role": "CEO",
+      "nationality": "DK"
+    },
+    {
+      "name": "Priya Sharma",
+      "role": "COO",
+      "nationality": "IN"
+    }
+  ],
+  "document_refs": [
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/d4316ff3/docs/aml_policy.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/d4316ff3/docs/financials.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/d4316ff3/docs/ownership.txt"
+  ]
+}

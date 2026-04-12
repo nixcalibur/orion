@@ -1,0 +1,33 @@
+{
+  "submission_id": "152d2302",
+  "applicant_name": "VaultBridge Finance 59",
+  "jurisdiction": "British Virgin Islands",
+  "declared_activities": [
+    "payment processing",
+    "remittance services"
+  ],
+  "incorporation_date": "2022-09-01",
+  "key_personnel": [
+    {
+      "name": "Clara Ng",
+      "role": "MLRO",
+      "nationality": "SG",
+      "pep_status": "declared_pep"
+    },
+    {
+      "name": "Sofia Andersen",
+      "role": "CEO",
+      "nationality": "DK"
+    },
+    {
+      "name": "Priya Sharma",
+      "role": "COO",
+      "nationality": "IN"
+    }
+  ],
+  "document_refs": [
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/152d2302/docs/aml_policy.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/152d2302/docs/financials.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/152d2302/docs/ownership.txt"
+  ]
+}

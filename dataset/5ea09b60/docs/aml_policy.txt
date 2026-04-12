@@ -1,0 +1,19 @@
+ZenithPay Holdings 41 – AML/KYC Policy (Summary)
+
+1. OWNERSHIP
+ZenithPay Holdings 41 ownership is held through a nominee arrangement managed by a Seychelles fiduciary. UBO documentation is held by the fiduciary and has not been provided.
+
+2. AML CONTROLS
+Manual transaction review process. No automated monitoring system currently deployed.
+Customer Due Diligence applied to all onboarding.
+Enhanced Due Diligence for transactions > EUR 10,000.
+
+3. PEP SCREENING
+No politically exposed persons have been identified among key personnel or beneficial owners.
+
+4. REGULATORY HISTORY
+A minor AML procedural warning was issued by the Estonian FSA in 2022. Remediation completed.
+
+
+5. DATA PRIVACY
+GDPR compliance programme underway. DPIA not yet completed.

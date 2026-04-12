@@ -1,0 +1,33 @@
+{
+  "submission_id": "bf5e875f",
+  "applicant_name": "ZenithPay Holdings 78",
+  "jurisdiction": "Cyprus",
+  "declared_activities": [
+    "high-risk digital infrastructure",
+    "payment processing",
+    "crypto-asset lending"
+  ],
+  "incorporation_date": "2021-10-01",
+  "key_personnel": [
+    {
+      "name": "Ahmed Al-Rashid",
+      "role": "CTO",
+      "nationality": "AE"
+    },
+    {
+      "name": "Clara Ng",
+      "role": "MLRO",
+      "nationality": "SG"
+    },
+    {
+      "name": "Sofia Andersen",
+      "role": "CEO",
+      "nationality": "DK"
+    }
+  ],
+  "document_refs": [
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/bf5e875f/docs/aml_policy.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/bf5e875f/docs/financials.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/bf5e875f/docs/ownership.txt"
+  ]
+}

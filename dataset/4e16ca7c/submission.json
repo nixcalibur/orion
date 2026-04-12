@@ -1,0 +1,32 @@
+{
+  "submission_id": "4e16ca7c",
+  "applicant_name": "TrustCore Payments 75",
+  "jurisdiction": "Singapore",
+  "declared_activities": [
+    "e-money issuance",
+    "payment processing"
+  ],
+  "incorporation_date": "2015-02-01",
+  "key_personnel": [
+    {
+      "name": "Boris Krasnov",
+      "role": "CFO",
+      "nationality": "RU"
+    },
+    {
+      "name": "Priya Sharma",
+      "role": "COO",
+      "nationality": "IN"
+    },
+    {
+      "name": "Clara Ng",
+      "role": "MLRO",
+      "nationality": "SG"
+    }
+  ],
+  "document_refs": [
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/4e16ca7c/docs/aml_policy.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/4e16ca7c/docs/financials.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/4e16ca7c/docs/ownership.txt"
+  ]
+}

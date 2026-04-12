@@ -1,0 +1,32 @@
+{
+  "submission_id": "db949d02",
+  "applicant_name": "PhoenixSettle Inc 76",
+  "jurisdiction": "Singapore",
+  "declared_activities": [
+    "e-money issuance",
+    "payment processing"
+  ],
+  "incorporation_date": "2018-04-01",
+  "key_personnel": [
+    {
+      "name": "Sofia Andersen",
+      "role": "CEO",
+      "nationality": "DK"
+    },
+    {
+      "name": "Clara Ng",
+      "role": "MLRO",
+      "nationality": "SG"
+    },
+    {
+      "name": "Priya Sharma",
+      "role": "COO",
+      "nationality": "IN"
+    }
+  ],
+  "document_refs": [
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/db949d02/docs/aml_policy.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/db949d02/docs/financials.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/db949d02/docs/ownership.txt"
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "submission_id": "f9c225e0",
+  "applicant_name": "AxisGuard Digital 74",
+  "jurisdiction": "France",
+  "declared_activities": [
+    "payment processing",
+    "crypto-asset custody"
+  ],
+  "incorporation_date": "2016-11-01",
+  "key_personnel": [
+    {
+      "name": "Clara Ng",
+      "role": "MLRO",
+      "nationality": "SG",
+      "pep_status": "declared_pep"
+    },
+    {
+      "name": "Boris Krasnov",
+      "role": "CFO",
+      "nationality": "RU"
+    },
+    {
+      "name": "Sofia Andersen",
+      "role": "CEO",
+      "nationality": "DK"
+    }
+  ],
+  "document_refs": [
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/f9c225e0/docs/aml_policy.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/f9c225e0/docs/financials.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/f9c225e0/docs/ownership.txt"
+  ]
+}

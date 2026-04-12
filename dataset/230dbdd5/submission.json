@@ -1,0 +1,33 @@
+{
+  "submission_id": "230dbdd5",
+  "applicant_name": "NovaPay Digital 21",
+  "jurisdiction": "Ireland",
+  "declared_activities": [
+    "payment processing",
+    "crypto-asset custody"
+  ],
+  "incorporation_date": "2015-09-01",
+  "key_personnel": [
+    {
+      "name": "Boris Krasnov",
+      "role": "CFO",
+      "nationality": "RU",
+      "pep_status": "declared_pep"
+    },
+    {
+      "name": "Ahmed Al-Rashid",
+      "role": "CTO",
+      "nationality": "AE"
+    },
+    {
+      "name": "Sofia Andersen",
+      "role": "CEO",
+      "nationality": "DK"
+    }
+  ],
+  "document_refs": [
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/230dbdd5/docs/aml_policy.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/230dbdd5/docs/financials.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/230dbdd5/docs/ownership.txt"
+  ]
+}

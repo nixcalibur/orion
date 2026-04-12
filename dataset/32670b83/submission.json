@@ -1,0 +1,32 @@
+{
+  "submission_id": "32670b83",
+  "applicant_name": "OpenVault Technologies 49",
+  "jurisdiction": "Ireland",
+  "declared_activities": [
+    "e-money issuance",
+    "payment processing"
+  ],
+  "incorporation_date": "2018-10-01",
+  "key_personnel": [
+    {
+      "name": "Sofia Andersen",
+      "role": "CEO",
+      "nationality": "DK"
+    },
+    {
+      "name": "Priya Sharma",
+      "role": "COO",
+      "nationality": "IN"
+    },
+    {
+      "name": "Clara Ng",
+      "role": "MLRO",
+      "nationality": "SG"
+    }
+  ],
+  "document_refs": [
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/32670b83/docs/aml_policy.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/32670b83/docs/financials.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/32670b83/docs/ownership.txt"
+  ]
+}

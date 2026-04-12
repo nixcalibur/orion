@@ -1,0 +1,32 @@
+{
+  "submission_id": "05b74dcc",
+  "applicant_name": "CipherBank Digital 64",
+  "jurisdiction": "Ireland",
+  "declared_activities": [
+    "payment processing",
+    "remittance services"
+  ],
+  "incorporation_date": "2018-12-01",
+  "key_personnel": [
+    {
+      "name": "Clara Ng",
+      "role": "MLRO",
+      "nationality": "SG"
+    },
+    {
+      "name": "Ahmed Al-Rashid",
+      "role": "CTO",
+      "nationality": "AE"
+    },
+    {
+      "name": "Priya Sharma",
+      "role": "COO",
+      "nationality": "IN"
+    }
+  ],
+  "document_refs": [
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/05b74dcc/docs/aml_policy.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/05b74dcc/docs/financials.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/05b74dcc/docs/ownership.txt"
+  ]
+}

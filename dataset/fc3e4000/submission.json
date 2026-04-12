@@ -1,0 +1,32 @@
+{
+  "submission_id": "fc3e4000",
+  "applicant_name": "NovaPay Digital 45",
+  "jurisdiction": "Ireland",
+  "declared_activities": [
+    "payment processing",
+    "crypto-asset custody"
+  ],
+  "incorporation_date": "2017-12-01",
+  "key_personnel": [
+    {
+      "name": "Sofia Andersen",
+      "role": "CEO",
+      "nationality": "DK"
+    },
+    {
+      "name": "Priya Sharma",
+      "role": "COO",
+      "nationality": "IN"
+    },
+    {
+      "name": "Clara Ng",
+      "role": "MLRO",
+      "nationality": "SG"
+    }
+  ],
+  "document_refs": [
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/fc3e4000/docs/aml_policy.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/fc3e4000/docs/financials.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/fc3e4000/docs/ownership.txt"
+  ]
+}

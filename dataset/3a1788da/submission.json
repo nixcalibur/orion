@@ -1,0 +1,32 @@
+{
+  "submission_id": "3a1788da",
+  "applicant_name": "ZenithPay Holdings 25",
+  "jurisdiction": "British Virgin Islands",
+  "declared_activities": [
+    "e-money issuance",
+    "payment processing"
+  ],
+  "incorporation_date": "2019-11-01",
+  "key_personnel": [
+    {
+      "name": "Priya Sharma",
+      "role": "COO",
+      "nationality": "IN"
+    },
+    {
+      "name": "Clara Ng",
+      "role": "MLRO",
+      "nationality": "SG"
+    },
+    {
+      "name": "Ahmed Al-Rashid",
+      "role": "CTO",
+      "nationality": "AE"
+    }
+  ],
+  "document_refs": [
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/3a1788da/docs/aml_policy.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/3a1788da/docs/financials.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/3a1788da/docs/ownership.txt"
+  ]
+}

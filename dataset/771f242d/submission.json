@@ -1,0 +1,32 @@
+{
+  "submission_id": "771f242d",
+  "applicant_name": "BlueKey Fintech 23",
+  "jurisdiction": "Luxembourg",
+  "declared_activities": [
+    "digital asset exchange",
+    "crypto-asset custody"
+  ],
+  "incorporation_date": "2016-06-01",
+  "key_personnel": [
+    {
+      "name": "Clara Ng",
+      "role": "MLRO",
+      "nationality": "SG"
+    },
+    {
+      "name": "Priya Sharma",
+      "role": "COO",
+      "nationality": "IN"
+    },
+    {
+      "name": "Sofia Andersen",
+      "role": "CEO",
+      "nationality": "DK"
+    }
+  ],
+  "document_refs": [
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/771f242d/docs/aml_policy.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/771f242d/docs/financials.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/771f242d/docs/ownership.txt"
+  ]
+}

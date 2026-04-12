@@ -1,0 +1,32 @@
+{
+  "submission_id": "e272b3cb",
+  "applicant_name": "VaultBridge Finance 15",
+  "jurisdiction": "Lithuania",
+  "declared_activities": [
+    "payment processing",
+    "crypto-asset custody"
+  ],
+  "incorporation_date": "2019-02-01",
+  "key_personnel": [
+    {
+      "name": "Boris Krasnov",
+      "role": "CFO",
+      "nationality": "RU"
+    },
+    {
+      "name": "Sofia Andersen",
+      "role": "CEO",
+      "nationality": "DK"
+    },
+    {
+      "name": "Priya Sharma",
+      "role": "COO",
+      "nationality": "IN"
+    }
+  ],
+  "document_refs": [
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/e272b3cb/docs/aml_policy.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/e272b3cb/docs/financials.txt",
+    "/Users/sduphy/Documents/stuff/projects/orion/dataset/e272b3cb/docs/ownership.txt"
+  ]
+}
