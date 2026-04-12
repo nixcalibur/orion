@@ -1,4 +1,4 @@
-# ORION Risk Assessment Pipeline
+# ORION (Operational Risk & Integrity Office) Pipeline
 
 A minimal, auditable pipeline for reviewing ORION authorization submissions and producing a structured risk recommendation for human reviewers.
 
