@@ -1,4 +1,4 @@
-from openai import OpenAI, AuthenticationError, APIConnectionError, RateLimitError
+from openai import OpenAI, OpenAIError, AuthenticationError, APIConnectionError, RateLimitError
 from dotenv import load_dotenv
 import hashlib
 import logging
@@ -79,6 +79,9 @@ Classification rules:
     except RateLimitError:
         log.error("OpenAI rate limit exceeded")
         return {"error": "llm_rate_limit"}
+    except OpenAIError as e:
+        log.error(f"OpenAI client error (likely missing API key): {e}")
+        return {"error": "llm_client_error"}
 
     content = response.choices[0].message.content
     try:
