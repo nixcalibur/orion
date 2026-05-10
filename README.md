@@ -84,26 +84,6 @@ python main.py
 
 ---
 
-## Docker
-
-Build:
-
-```bash
-docker build -t orion-pipeline .
-```
-
-Run:
-
-```bash
-docker run --rm \
-  -e OPENAI_API_KEY="$OPENAI_API_KEY" \
-  -e REVIEW_API_URL="https://httpbin.org/post" \
-  orion-pipeline \
-  python handler.py '{"submission_id":"fc3e4000"}'
-```
-
----
-
 ## Input format
 
 Each submission JSON should include:
@@ -147,6 +127,41 @@ Response is returned by `handler.py` as:
 
 ---
 
+## Running the UI
+
+The dashboard is a FastAPI backend + React/Vite frontend. Run both concurrently from the project root.
+
+**Backend**
+
+```bash
+pip install fastapi uvicorn python-multipart
+uvicorn api:app --reload
+```
+
+The API runs at `http://localhost:8000`. It reads `audit.jsonl` and wraps `run_pipeline()` for background processing.
+
+**Frontend**
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The UI runs at `http://localhost:5173`. All `/api` requests proxy automatically to the backend — no CORS configuration needed on the client.
+
+---
+
+## Preview
+
+<img width="1465" height="803" alt="1" src="https://github.com/user-attachments/assets/f57dc88f-a29f-4eaa-8644-744123f924f9" />
+
+<img width="1464" height="803" alt="2" src="https://github.com/user-attachments/assets/28b0f4be-d208-4036-98da-d71d19ed4156" />
+
+<img width="1465" height="804" alt="3" src="https://github.com/user-attachments/assets/4b77be9f-4e1b-44af-a09b-5f4a1f3a193b" />
+
+---
+
 ## Auditability and reproducibility
 
 Each run appends one line to `audit.jsonl`, including:
@@ -184,28 +199,25 @@ This compares predicted authorization levels to `dataset/*/ground_truth.json`.
 
 ---
 
-## Running the UI
+## Docker
 
-The dashboard is a FastAPI backend + React/Vite frontend. Run both concurrently from the project root.
-
-**Backend**
+Build:
 
 ```bash
-pip install fastapi uvicorn python-multipart
-uvicorn api:app --reload
+docker build -t orion-pipeline .
 ```
 
-The API runs at `http://localhost:8000`. It reads `audit.jsonl` and wraps `run_pipeline()` for background processing.
-
-**Frontend**
+Run:
 
 ```bash
-cd frontend
-npm install
-npm run dev
+docker run --rm \
+  -e OPENAI_API_KEY="$OPENAI_API_KEY" \
+  -e REVIEW_API_URL="https://httpbin.org/post" \
+  orion-pipeline \
+  python handler.py '{"submission_id":"fc3e4000"}'
 ```
 
-The UI runs at `http://localhost:5173`. All `/api` requests proxy automatically to the backend — no CORS configuration needed on the client.
+---
 
 **Views**
 
