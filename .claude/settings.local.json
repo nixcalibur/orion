@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import pydantic; print\\(pydantic.VERSION\\)\")",
+      "Bash(python *)",
+      "Bash(python3 -m json.tool)"
+    ]
+  }
+}

@@ -3,10 +3,12 @@ import logging
 import sys
 from datetime import datetime, timezone
 
+from pydantic import ValidationError
+
 from ingest import ingest
 from extract import extract_profile
 from score import score_profile, get_authorization_level, generate_followup_questions
-from schema import AssessmentResult, ReviewerOverride, ReviewStatus
+from schema import AssessmentResult, ReviewerOverride, ReviewStatus, RiskProfile
 from audit import write_audit_record, _hash_inputs
 from deliver import deliver, DeliveryError
 
@@ -27,11 +29,22 @@ def run_pipeline(submission_path):
         f"with {len(docs)} document(s)"
     )
 
-    # 2. Extract structured risk profile 
+    # 2. Extract structured risk profile
     log.info("Extracting risk profile...")
     profile = extract_profile(submission, docs)
     if "error" in profile:
         log.error(f"Profile extraction failed: {profile['error']}")
+        write_audit_record(
+            submission=submission,
+            docs=docs,
+            profile={},
+            dim_scores={},
+            composite=0.0,
+            authorization="",
+            followup_questions=[],
+            model="unknown",
+            status="error",
+        )
         return None
     log.info(f"Profile: {json.dumps(profile)}")
 
@@ -59,6 +72,12 @@ def run_pipeline(submission_path):
     profile.pop("_extraction_params", None)
 
     # 6. Build and validate reviewer-ready result (profile is clean of metadata now)
+    try:
+        risk_profile = RiskProfile(**profile)
+    except ValidationError as e:
+        log.error(f"RiskProfile validation failed: {e}")
+        return None
+
     result = AssessmentResult(
         submission_id=submission["submission_id"],
         applicant_name=submission.get("applicant_name"),
@@ -66,7 +85,7 @@ def run_pipeline(submission_path):
         authorization_level=authorization,
         composite_score=composite,
         dimension_scores=dim_scores,
-        risk_profile=profile,
+        risk_profile=risk_profile,
         declared_activities=submission.get("declared_activities", []),
         activities_verified=profile.get("activities_verified", []),
         activities_undeclared=profile.get("activities_undeclared", []),
@@ -79,7 +98,7 @@ def run_pipeline(submission_path):
     # 7. Deliver to external review API
     input_hash = _hash_inputs(submission, docs)
     try:
-        deliver(result.json(), submission_id=submission["submission_id"], input_hash=input_hash)
+        deliver(result.model_dump_json(), submission_id=submission["submission_id"], input_hash=input_hash)
     except DeliveryError as e:
         log.error(f"Delivery failed | retriable={e.retriable} status={e.status_code} error={e}")
 

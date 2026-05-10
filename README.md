@@ -19,21 +19,30 @@ For each submission, the pipeline:
 
 ## Repository structure
 
+**Pipeline**
 - `handler.py` — serverless-style entrypoint with timeout guard.
 - `main.py` — end-to-end orchestration.
 - `ingest.py` — fetch + parse + truncation budget for docs.
-- `extract.py` — LLM extraction into strict JSON profile.
-- `score.py` — deterministic scoring + recommendation + follow-ups.
-- `schema.py` — Pydantic output contracts and review override model.
-- `audit.py` — append-only JSONL audit records.
+- `extract.py` — LLM extraction into strict JSON profile (retry on rate-limit/connection errors; document content isolated in XML delimiters to mitigate prompt injection).
+- `score.py` — deterministic scoring + recommendation + follow-ups (max raw score derived programmatically from `DIMENSION_SCORES`).
+- `schema.py` — Pydantic v2 output contracts and review override model.
+- `audit.py` — append-only JSONL audit records (includes `status` field for error tracking).
 - `deliver.py` — external API delivery with retries + idempotency key.
+
+**API & UI**
+- `api.py` — FastAPI HTTP layer wrapping the pipeline; serves the dashboard backend.
+- `frontend/` — React 18 + Vite + Tailwind v4 dashboard (Dashboard, Submissions list, Detail view, Upload form).
+
+**Other**
 - `dataset/` — sample submissions and expected outcomes.
+- `tests/` — pytest unit tests for scoring logic and schema validation.
 
 ---
 
 ## Requirements
 
 - Python 3.11+
+- Pydantic v2 (`pydantic>=2.0`)
 - OpenAI API key
 
 Install dependencies:
@@ -142,6 +151,7 @@ Response is returned by `handler.py` as:
 
 Each run appends one line to `audit.jsonl`, including:
 
+- `status` (`"success"` or `"error"`)
 - `input_hash` (SHA-256 of submission + docs)
 - `commit_sha`
 - resolved model + backend fingerprint
@@ -149,6 +159,16 @@ Each run appends one line to `audit.jsonl`, including:
 - scores, recommendation, and follow-up questions
 
 This supports review traceability and replay diagnostics.
+
+---
+
+## Tests
+
+```bash
+pytest tests/
+```
+
+Covers `score_profile` (APPROVE/CONDITIONAL/DEFER/REJECT paths, criminal flag override, missing-doc penalties, composite clamping), `get_authorization_level` (all four thresholds + both hard-rule overrides), `ReviewerOverride` validators, and `RiskProfile` enum rejection.
 
 ---
 
@@ -161,6 +181,40 @@ python evaluate.py
 ```
 
 This compares predicted authorization levels to `dataset/*/ground_truth.json`.
+
+---
+
+## Running the UI
+
+The dashboard is a FastAPI backend + React/Vite frontend. Run both concurrently from the project root.
+
+**Backend**
+
+```bash
+pip install fastapi uvicorn python-multipart
+uvicorn api:app --reload
+```
+
+The API runs at `http://localhost:8000`. It reads `audit.jsonl` and wraps `run_pipeline()` for background processing.
+
+**Frontend**
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The UI runs at `http://localhost:5173`. All `/api` requests proxy automatically to the backend — no CORS configuration needed on the client.
+
+**Views**
+
+| Route | Description |
+|---|---|
+| `/` | Dashboard — stats cards, donut chart, 7-day bar chart, recent submissions |
+| `/submissions` | Searchable and filterable submissions table |
+| `/submissions/:id` | Full assessment detail, dimension scores chart, reviewer action panel |
+| `/submit` | Drag-and-drop upload form for new submissions |
 
 ---
 

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, model_validator, ValidationInfo
 from typing import Dict, List, Optional
 from datetime import datetime
 from enum import Enum
@@ -24,18 +24,13 @@ class ReviewerOverride(BaseModel):
     override_level: Optional[AuthorizationLevel] = None  # set only when OVERRIDDEN
     notes: Optional[str] = None
 
-    @validator("reviewer_id", always=True)
-    def require_reviewer_when_actioned(cls, v, values):
-        status = values.get("status")
-        if status in (ReviewStatus.ACCEPTED, ReviewStatus.OVERRIDDEN) and not v:
+    @model_validator(mode="after")
+    def validate_review_constraints(self) -> "ReviewerOverride":
+        if self.status in (ReviewStatus.ACCEPTED, ReviewStatus.OVERRIDDEN) and not self.reviewer_id:
             raise ValueError("reviewer_id is required when status is ACCEPTED or OVERRIDDEN")
-        return v
-
-    @validator("override_level", always=True)
-    def require_level_when_overridden(cls, v, values):
-        if values.get("status") == ReviewStatus.OVERRIDDEN and v is None:
+        if self.status == ReviewStatus.OVERRIDDEN and self.override_level is None:
             raise ValueError("override_level is required when status is OVERRIDDEN")
-        return v
+        return self
 
 
 class OwnershipType(str, Enum):
@@ -100,6 +95,7 @@ class AssessmentResult(BaseModel):
     key_findings: List[str] = []
     review: Optional[ReviewerOverride] = None
 
-    @validator("composite_score")
-    def round_score(cls, v):
+    @field_validator("composite_score", mode="after")
+    @classmethod
+    def round_score(cls, v: float) -> float:
         return round(v, 2)

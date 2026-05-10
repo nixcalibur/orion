@@ -10,7 +10,7 @@ DIMENSION_SCORES = {
 }
 
 MISSING_DOC_PENALTY = 0.5
-MAX_RAW_SCORE = 10.0  # calibrated against labeled dataset
+MAX_RAW_SCORE = sum(max(v.values()) for v in DIMENSION_SCORES.values())
 
 
 def score_profile(profile):

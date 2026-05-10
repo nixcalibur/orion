@@ -35,9 +35,11 @@ def write_audit_record(
     followup_questions: list,
     model: str,
     system_fingerprint: str = None,
+    status: str = "success",
 ):
     record = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "status": status,
         "submission_id": submission.get("submission_id"),
         "applicant_name": submission.get("applicant_name"),
         "input_hash": _hash_inputs(submission, docs),
