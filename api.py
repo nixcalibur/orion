@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import threading
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -8,12 +9,14 @@ from typing import List
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="ORION API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://localhost:8000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -21,6 +24,7 @@ app.add_middleware(
 
 AUDIT_LOG = "audit.jsonl"
 DATASET_DIR = "dataset"
+FRONTEND_DIST = os.getenv("FRONTEND_DIST", "frontend/dist")
 
 _job_status: dict = {}   # submission_id -> "processing" | "complete" | "error"
 _reviews: dict = {}      # submission_id -> review dict
@@ -41,7 +45,12 @@ def _read_audit_records() -> list:
     return records
 
 
+_SAFE_ID = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
 def _read_submission_meta(submission_id: str) -> dict:
+    if not _SAFE_ID.match(submission_id):
+        return {}
     path = Path(DATASET_DIR) / submission_id / "submission.json"
     if path.exists():
         with open(path) as f:
@@ -58,6 +67,11 @@ def _run_pipeline_job(submission_id: str, submission_path: str) -> None:
         _job_status[submission_id] = "error"
 
 
+@app.get("/health")
+def health():
+    return {"status": "ok", "service": "orion"}
+
+
 @app.post("/api/submissions")
 async def create_submission(
     submission_file: UploadFile = File(...),
@@ -70,6 +84,11 @@ async def create_submission(
         raise HTTPException(status_code=400, detail="submission_file must be valid JSON")
 
     submission_id = data.get("submission_id") or str(uuid.uuid4())[:8]
+    if not _SAFE_ID.match(submission_id):
+        raise HTTPException(
+            status_code=400,
+            detail="submission_id may only contain letters, digits, '-' and '_'",
+        )
     data["submission_id"] = submission_id
 
     sub_dir = Path(DATASET_DIR) / submission_id
@@ -79,7 +98,10 @@ async def create_submission(
     doc_refs = list(data.get("document_refs", []))
     for doc in documents:
         doc_bytes = await doc.read()
-        dest = docs_dir / doc.filename
+        filename = Path(doc.filename or "").name
+        if not filename:
+            raise HTTPException(status_code=400, detail="Invalid document filename")
+        dest = docs_dir / filename
         dest.write_bytes(doc_bytes)
         ref = str(dest)
         if ref not in doc_refs:
@@ -250,3 +272,28 @@ def get_stats():
         "rejection_rate": round(reject_count / total * 100, 1),
         "recent_7d": [{"date": d, "count": c} for d, c in trend.items()],
     }
+
+
+def _mount_frontend() -> None:
+    dist = Path(FRONTEND_DIST)
+    if not dist.is_dir():
+        return
+
+    assets = dist / "assets"
+    if assets.is_dir():
+        app.mount("/assets", StaticFiles(directory=str(assets)), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa(full_path: str):
+        if full_path.startswith("api"):
+            raise HTTPException(status_code=404, detail="Not found")
+        candidate = dist / full_path
+        if candidate.is_file():
+            return FileResponse(candidate)
+        index = dist / "index.html"
+        if index.is_file():
+            return FileResponse(index)
+        raise HTTPException(status_code=404, detail="Frontend not built")
+
+
+_mount_frontend()

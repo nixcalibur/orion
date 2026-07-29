@@ -1,237 +1,183 @@
-# ORION (Operational Risk & Integrity Office) Pipeline
+# ORION — Operational Risk & Integrity Office
 
-A minimal, auditable pipeline for reviewing ORION authorization submissions and producing a structured risk recommendation for human reviewers.
+An AI-assisted compliance review system that reads regulatory submissions, extracts structured risk profiles, and produces auditable authorization recommendations — but a human is always the one who decides.
 
-## What this does
+## The problem
 
-For each submission, the pipeline:
+A compliance officer reviews 50 license applications every month. Each submission includes JSON metadata and 3–12 supporting documents (PDF policies, Excel financials, DOCX organizational charts, scanned IDs). The review must cover ownership transparency, AML controls, regulatory history, cybersecurity posture, financial health, privacy compliance, and politically exposed person (PEP) screening. Every decision needs a documented rationale, because regulators ask "why?" months later.
 
-1. Ingests a primary JSON and referenced documents (local, `s3://`, `gs://`).
-2. Parses supported document formats (`.txt`, `.pdf`, `.docx`, `.xlsx`).
-3. Uses an LLM to extract a structured risk profile.
-4. Applies deterministic scoring rules to compute a composite risk score.
-5. Recommends an authorization level (`APPROVE`, `CONDITIONAL`, `DEFER`, `REJECT`).
-6. Generates follow-up questions for missing/inconsistent information.
-7. Validates output schema and writes an audit log.
-8. Delivers result JSON to an external review API.
+Without tooling, this means:
 
----
+- **4–6 hours per submission** reading documents and cross-referencing against checklists.
+- **Inconsistent decisions** across reviewers. Same facts, different outcome.
+- **No audit trail** connecting raw evidence to the final recommendation.
 
-## Repository structure
+ORION cuts that to minutes and makes the reasoning explicit.
 
-**Pipeline**
-- `handler.py` — serverless-style entrypoint with timeout guard.
-- `main.py` — end-to-end orchestration.
-- `ingest.py` — fetch + parse + truncation budget for docs.
-- `extract.py` — LLM extraction into strict JSON profile (retry on rate-limit/connection errors; document content isolated in XML delimiters to mitigate prompt injection).
-- `score.py` — deterministic scoring + recommendation + follow-ups (max raw score derived programmatically from `DIMENSION_SCORES`).
-- `schema.py` — Pydantic v2 output contracts and review override model.
-- `audit.py` — append-only JSONL audit records (includes `status` field for error tracking).
-- `deliver.py` — external API delivery with retries + idempotency key.
+## What ORION does
 
-**API & UI**
-- `api.py` — FastAPI HTTP layer wrapping the pipeline; serves the dashboard backend.
-- `frontend/` — React 18 + Vite + Tailwind v4 dashboard (Dashboard, Submissions list, Detail view, Upload form).
+1. **Ingests** a submission JSON + any attached documents (local files, S3, GCS).
+2. **Parses** `.pdf`, `.docx`, `.xlsx`, and `.txt` into structured text.
+3. **Extracts** a risk profile via LLM — ownership type, AML presence, regulatory history, cyber rating, financial health, privacy compliance, PEP status, criminal flags.
+4. **Scores** each dimension with deterministic rules. No LLM decides the outcome.
+5. **Recommends** `APPROVE`, `CONDITIONAL`, `DEFER`, or `REJECT`.
+6. **Generates** follow-up questions for missing or inconsistent information.
+7. **Writes** an append-only audit log (JSONL) with input hash, commit SHA, model fingerprint, prompt hash, and all scores.
+8. **Delivers** the result to an external review API with retries and idempotency keys.
 
-**Other**
-- `dataset/` — sample submissions and expected outcomes.
-- `tests/` — pytest unit tests for scoring logic and schema validation.
+A human reviewer sees the recommendation, the evidence breakdown, and a complete reasoning trail — then accepts or overrides from a dashboard.
 
----
+## Why this architecture
 
-## Requirements
+| Decision | Why |
+|---|---|
+| **LLM extracts, deterministic code decides** | The LLM reads documents and classifies facts. The scoring logic is pure Python — auditable, testable, version-controlled. If the model hallucinates an enum value, the system fails closed (worst-case score) and logs a warning. |
+| **Input hashing** | Every run records `SHA-256(submission + docs)`. Same input, same hash. Makes it possible to answer "did we review this exact submission before?" |
+| **Prompt isolation** | Document content is wrapped in `<document>` XML tags with explicit instructions to treat tag content as data, not commands. Mitigates prompt injection from adversarial documents. |
+| **JSONL audit log** | Append-only. Each line is one run. Includes `commit_sha`, `model`, `system_fingerprint`, `prompt_hash`, and `extraction_params`. Enough to replay or debug any decision. |
+| **Retry + idempotency** | LLM extraction retries on rate-limit/connection errors with exponential backoff. Delivery uses stable idempotency keys so duplicate POSTs are safe. |
+| **Pydantic v2 schema** | Output contract validated before any result leaves the pipeline. `ReviewerOverride` cross-field validators enforce that overridden decisions include a reviewer ID and new level. |
 
-- Python 3.11+
-- Pydantic v2 (`pydantic>=2.0`)
-- OpenAI API key
+### Risk dimensions scored
 
-Install dependencies:
+| Dimension | Values → Scores |
+|---|---|
+| Ownership | clear (0), complex (2), opaque (3) |
+| AML policy present | true (0), false (3) |
+| Regulatory history | clean (0), minor issues (1), major issues (3) |
+| Cyber posture | strong/adequate (0), weak/inadequate (0.5) |
+| Financial health | healthy (0), marginal (0.5), stressed (1), distressed (1) |
+| Privacy compliance | compliant (0), partial (0.5), non-compliant (1) |
+| Has PEP | false (0), true (1) |
+| Has criminal flag | false (0), true (4) |
+| Missing documents | +0.5 per doc |
 
-```bash
-pip install -r requirements.txt
-```
+Composite score = `(raw / max_raw) * 10`, clamped to 0–10.
 
-Set environment variables:
-
-```bash
-export OPENAI_API_KEY="<your-key>"
-# Optional:
-export REVIEW_API_URL="https://httpbin.org/post"
-export PIPELINE_TIMEOUT_SECONDS="270"
-```
-
----
-
-## Run locally
-
-Run one submission by ID:
-
-```bash
-python handler.py '{"submission_id":"fc3e4000"}'
-```
-
-Run one submission by path:
-
-```bash
-python main.py dataset/fc3e4000/submission.json
-```
-
-Run all dataset submissions:
-
-```bash
-python main.py
-```
-
----
-
-## Input format
-
-Each submission JSON should include:
-
-- `submission_id`
-- applicant metadata (`applicant_name`, `jurisdiction`, etc.)
-- `declared_activities`
-- `document_refs` (paths or object storage URIs)
-
-Example (`document_refs` may include mixed formats):
-
-```json
-{
-  "submission_id": "sample_formats",
-  "document_refs": [
-    "dataset/sample_formats/docs/aml_policy.pdf",
-    "dataset/sample_formats/docs/ownership.docx",
-    "dataset/sample_formats/docs/financials.xlsx"
-  ]
-}
-```
-
----
-
-## Output format
-
-Validated `AssessmentResult` includes:
-
-- risk dimension scores
-- composite score
-- authorization recommendation
-- extracted risk profile
-- follow-up questions
-- reviewer status block (pending/accepted/overridden)
-
-Response is returned by `handler.py` as:
-
-```json
-{ "statusCode": 200, "body": "<AssessmentResult JSON>" }
-```
-
----
-
-## Running the UI
-
-The dashboard is a FastAPI backend + React/Vite frontend. Run both concurrently from the project root.
-
-**Backend**
-
-```bash
-pip install fastapi uvicorn python-multipart
-uvicorn api:app --reload
-```
-
-The API runs at `http://localhost:8000`. It reads `audit.jsonl` and wraps `run_pipeline()` for background processing.
-
-**Frontend**
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-The UI runs at `http://localhost:5173`. All `/api` requests proxy automatically to the backend — no CORS configuration needed on the client.
-
----
-
-## Preview
-
-<img width="1465" height="803" alt="1" src="https://github.com/user-attachments/assets/f57dc88f-a29f-4eaa-8644-744123f924f9" />
-
-<img width="1464" height="803" alt="2" src="https://github.com/user-attachments/assets/28b0f4be-d208-4036-98da-d71d19ed4156" />
-
-<img width="1465" height="804" alt="3" src="https://github.com/user-attachments/assets/4b77be9f-4e1b-44af-a09b-5f4a1f3a193b" />
-
----
-
-## Auditability and reproducibility
-
-Each run appends one line to `audit.jsonl`, including:
-
-- `status` (`"success"` or `"error"`)
-- `input_hash` (SHA-256 of submission + docs)
-- `commit_sha`
-- resolved model + backend fingerprint
-- `prompt_hash` and extraction params
-- scores, recommendation, and follow-up questions
-
-This supports review traceability and replay diagnostics.
-
----
-
-## Tests
-
-```bash
-pytest tests/
-```
-
-Covers `score_profile` (APPROVE/CONDITIONAL/DEFER/REJECT paths, criminal flag override, missing-doc penalties, composite clamping), `get_authorization_level` (all four thresholds + both hard-rule overrides), `ReviewerOverride` validators, and `RiskProfile` enum rejection.
-
----
+Hard overrides: criminal flag or major regulatory history → `REJECT`, regardless of score.
 
 ## Evaluation
 
-Batch evaluation script:
+23 labeled submissions with ground-truth authorization levels:
+
+| Level | Count |
+|---|---|
+| CONDITIONAL | 10 |
+| DEFER | 8 |
+| REJECT | 3 |
+| APPROVE | 2 |
+
+Run evaluation:
 
 ```bash
 python evaluate.py
 ```
 
-This compares predicted authorization levels to `dataset/*/ground_truth.json`.
+Compares predicted vs. expected authorization level for each submission. Ground truth files include `expected_composite_range` for sensitivity testing.
 
----
+## Repository structure
 
-## Docker
+**Pipeline** — each file does one thing
 
-Build:
+- `main.py` — end-to-end orchestration (run one, run all)
+- `handler.py` — Lambda/Cloud Run entrypoint with timeout guard
+- `ingest.py` — fetch from local, S3, or GCS; parse PDF/DOCX/XLSX/TXT; enforce per-document and total character budgets
+- `extract.py` — LLM extraction with retry on rate-limit/connection errors; XML-delimited documents for prompt injection mitigation
+- `score.py` — deterministic dimension scoring, composite normalization, authorization-level thresholds, follow-up question generator
+- `schema.py` — Pydantic v2 models (`RiskProfile`, `AssessmentResult`, `ReviewerOverride`) with cross-field validators
+- `audit.py` — append-only JSONL audit records with input hash, commit SHA, model fingerprint, prompt hash
+- `deliver.py` — POST results to external review API with 4-retry exponential backoff and idempotency keys
+
+**API & UI**
+
+- `api.py` — FastAPI backend serving the dashboard and wrapping `run_pipeline()` for background submission processing
+- `frontend/` — React 18 + Vite + Tailwind v4 + Recharts
+
+**Other**
+
+- `dataset/` — 23 sample submissions with ground truth labels
+- `tests/` — 28 pytest tests covering all scoring paths, authorization levels, schema validators, and edge cases
+
+## Quick start
 
 ```bash
-docker build -t orion-pipeline .
+# Install
+pip install -r requirements.txt
+cp .env.example .env   # add your OPENAI_API_KEY
+
+# Run one submission
+python main.py dataset/fc3e4000/submission.json
+
+# Run all
+python main.py
+
+# Serverless entrypoint
+python handler.py '{"submission_id":"fc3e4000"}'
 ```
 
-Run:
+## Dashboard
+
+Run two terminals from the project root:
 
 ```bash
-docker run --rm \
-  -e OPENAI_API_KEY="$OPENAI_API_KEY" \
-  -e REVIEW_API_URL="https://httpbin.org/post" \
-  orion-pipeline \
-  python handler.py '{"submission_id":"fc3e4000"}'
+# Terminal 1 — API
+uvicorn api:app --reload
+
+# Terminal 2 — UI
+cd frontend && npm install && npm run dev
 ```
 
----
-
-**Views**
+Open `http://localhost:5173`.
 
 | Route | Description |
 |---|---|
-| `/` | Dashboard — stats cards, donut chart, 7-day bar chart, recent submissions |
-| `/submissions` | Searchable and filterable submissions table |
-| `/submissions/:id` | Full assessment detail, dimension scores chart, reviewer action panel |
-| `/submit` | Drag-and-drop upload form for new submissions |
+| `/` | Stats cards, distribution donut, 7-day trend, recent submissions |
+| `/submissions` | Searchable, filterable table of all assessments |
+| `/submissions/:id` | Full detail: dimension scores chart, key findings, reviewer action panel |
+| `/submit` | Drag-and-drop upload form with multi-file document attachments |
 
----
+<img width="1465" height="803" alt="Dashboard" src="https://github.com/user-attachments/assets/f57dc88f-a29f-4eaa-8644-744123f924f9" />
 
-## Notes
+<img width="1464" height="803" alt="Submissions" src="https://github.com/user-attachments/assets/28b0f4be-d208-4036-98da-d71d19ed4156" />
 
-- If `OPENAI_API_KEY` is missing/invalid, extraction fails and the pipeline returns an error response.
-- Delivery retries transient API errors with exponential backoff.
-- Ingestion enforces per-document and total text budgets to fit serverless/runtime constraints.
+<img width="1465" height="804" alt="Detail" src="https://github.com/user-attachments/assets/4b77be9f-4e1b-44af-a09b-5f4a1f3a193b" />
+
+## Tests
+
+```bash
+pytest tests/ -v   # 28 tests, all passing
+```
+
+Covers: `score_profile` (all four authorization paths, criminal-flag override, missing-doc penalty, composite clamping, fail-closed unknown values), `get_authorization_level` (threshold boundaries, hard-rule overrides), `ReviewerOverride` validators (ACCEPTED requires reviewer_id, OVERRIDDEN requires both reviewer_id and override_level), and `RiskProfile` enum rejection for all five categorical dimensions.
+
+## Docker
+
+```bash
+docker build -t orion-pipeline .
+docker run --rm -e OPENAI_API_KEY="$OPENAI_API_KEY" orion-pipeline python handler.py '{"submission_id":"fc3e4000"}'
+```
+
+## Audit log
+
+Each pipeline run appends one JSON line to `audit.jsonl`:
+
+```json
+{
+  "timestamp": "2026-07-29T09:44:48.619754+00:00",
+  "status": "success",
+  "submission_id": "05b74dcc",
+  "input_hash": "959b9171c2b12cb1...",
+  "commit_sha": "3092a3f",
+  "model": "gpt-4o-mini-2024-07-18",
+  "system_fingerprint": "fp_c881474fd1",
+  "prompt_hash": "4664616476...",
+  "extraction_params": {"temperature": 0, "seed": 42},
+  "extracted_profile": { ... },
+  "dimension_scores": { ... },
+  "composite_score": 3.94,
+  "authorization_level": "CONDITIONAL",
+  "followup_questions": [ ... ]
+}
+```
+
+Includes `status: "error"` records for extraction failures and schema validation rejections.

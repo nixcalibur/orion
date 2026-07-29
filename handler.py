@@ -70,7 +70,7 @@ def lambda_handler(event: dict, context=None) -> dict:
     if result is None:
         return {"statusCode": 422, "body": json.dumps({"error": "Pipeline returned no result"})}
 
-    return {"statusCode": 200, "body": result.json()}
+    return {"statusCode": 200, "body": result.model_dump_json()}
 
 
 if __name__ == "__main__":

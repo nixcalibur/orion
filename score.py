@@ -1,3 +1,7 @@
+import logging
+
+log = logging.getLogger(__name__)
+
 DIMENSION_SCORES = {
     "ownership":          {"clear": 0, "complex": 2,   "opaque": 3},
     "aml_present":        {True: 0,    False: 3},
@@ -19,7 +23,11 @@ def score_profile(profile):
 
     for dim, weights in DIMENSION_SCORES.items():
         value = profile.get(dim)
-        s = weights.get(value, 0)
+        s = weights.get(value)
+        if s is None:
+            # Fail closed: unknown/missing value scores worst case for the dimension
+            s = max(weights.values())
+            log.warning(f"Unknown value for '{dim}': {value!r} — scoring worst case ({s})")
         dim_scores[dim] = s
         raw += s
 
