@@ -53,7 +53,10 @@ Analyze this submission and extract a structured risk profile. Return ONLY valid
   "missing_docs": ["list of missing or materially incomplete documents"],
   "activities_verified": ["activities confirmed present in documents"],
   "activities_undeclared": ["activities found in docs but absent from declared list"],
-  "key_findings": ["concise list of notable risk findings"]
+  "key_findings": ["concise list of notable risk findings"],
+  "evidence": {{
+    "ownership": {{"source_document": "doc name", "excerpt": "verbatim quote", "supporting_details": "optional context"}}
+  }}
 }}
 
 Classification rules:
@@ -65,7 +68,8 @@ Classification rules:
 - privacy: assess from any GDPR/data protection references
 - has_pep: true if any key personnel are politically exposed persons
 - has_criminal_flag: true if any criminal history or sanctions mentioned
-- missing_docs: list documents that are expected for this type of firm but absent or incomplete"""
+- missing_docs: list documents that are expected for this type of firm but absent or incomplete
+- evidence: for each scored dimension (ownership, aml_present, regulatory_history, cyber, financial_health, privacy, has_pep, has_criminal_flag) where the documents contain relevant information, add an entry keyed by the dimension name. "excerpt" must be a verbatim quote from the named document. "supporting_details" is optional extra context. Omit dimensions with no documentary support."""
 
     response = None
     for attempt in range(_MAX_RETRIES):

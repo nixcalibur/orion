@@ -16,16 +16,14 @@ ORION cuts that to minutes and makes the reasoning explicit.
 
 ## What ORION does
 
-1. **Ingests** a submission JSON + any attached documents (local files, S3, GCS).
+1. **Ingests** a submission JSON + any attached documents (local files, S3, GCS), or a standalone document file directly.
 2. **Parses** `.pdf`, `.docx`, `.xlsx`, and `.txt` into structured text.
 3. **Extracts** a risk profile via LLM — ownership type, AML presence, regulatory history, cyber rating, financial health, privacy compliance, PEP status, criminal flags.
 4. **Scores** each dimension with deterministic rules. No LLM decides the outcome.
 5. **Recommends** `APPROVE`, `CONDITIONAL`, `DEFER`, or `REJECT`.
 6. **Generates** follow-up questions for missing or inconsistent information.
 7. **Writes** an append-only audit log (JSONL) with input hash, commit SHA, model fingerprint, prompt hash, and all scores.
-8. **Delivers** the result to an external review API with retries and idempotency keys.
-
-A human reviewer sees the recommendation, the evidence breakdown, and a complete reasoning trail — then accepts or overrides from a dashboard.
+8. **Delivers** the structured result to an external review API with retries and idempotency keys.
 
 ## Why this architecture
 
@@ -37,6 +35,8 @@ A human reviewer sees the recommendation, the evidence breakdown, and a complete
 | **JSONL audit log** | Append-only. Each line is one run. Includes `commit_sha`, `model`, `system_fingerprint`, `prompt_hash`, and `extraction_params`. Enough to replay or debug any decision. |
 | **Retry + idempotency** | LLM extraction retries on rate-limit/connection errors with exponential backoff. Delivery uses stable idempotency keys so duplicate POSTs are safe. |
 | **Pydantic v2 schema** | Output contract validated before any result leaves the pipeline. `ReviewerOverride` cross-field validators enforce that overridden decisions include a reviewer ID and new level. |
+| **Standalone document mode** | No JSON wrapper required. Point the pipeline at any `.pdf`, `.docx`, `.xlsx`, or `.txt` and it auto-wraps it into a submission. |
+| **Evidence attribution** | Each risk dimension classification includes a source document name and verbatim excerpt justifying it. Stored in the audit log, viewable in the pipeline output. |
 
 ### Risk dimensions scored
 
@@ -81,71 +81,42 @@ Compares predicted vs. expected authorization level for each submission. Ground 
 
 - `main.py` — end-to-end orchestration (run one, run all)
 - `handler.py` — Lambda/Cloud Run entrypoint with timeout guard
-- `ingest.py` — fetch from local, S3, or GCS; parse PDF/DOCX/XLSX/TXT; enforce per-document and total character budgets
+- `ingest.py` — fetch from local, S3, or GCS; parse PDF/DOCX/XLSX/TXT; auto-wrap standalone documents; enforce per-document and total character budgets
 - `extract.py` — LLM extraction with retry on rate-limit/connection errors; XML-delimited documents for prompt injection mitigation
 - `score.py` — deterministic dimension scoring, composite normalization, authorization-level thresholds, follow-up question generator
 - `schema.py` — Pydantic v2 models (`RiskProfile`, `AssessmentResult`, `ReviewerOverride`) with cross-field validators
 - `audit.py` — append-only JSONL audit records with input hash, commit SHA, model fingerprint, prompt hash
 - `deliver.py` — POST results to external review API with 4-retry exponential backoff and idempotency keys
 
-**API & UI**
-
-- `api.py` — FastAPI backend serving the dashboard and wrapping `run_pipeline()` for background submission processing
-- `frontend/` — React 18 + Vite + Tailwind v4 + Recharts
-
 **Other**
 
 - `dataset/` — 23 sample submissions with ground truth labels
-- `tests/` — 28 pytest tests covering all scoring paths, authorization levels, schema validators, and edge cases
+- `tests/` — 29 pytest tests covering all scoring paths, authorization levels, schema validators, edge cases, and evidence attribution
 
 ## Quick start
 
 ```bash
 # Install
 pip install -r requirements.txt
-cp .env.example .env   # add your OPENAI_API_KEY
+export OPENAI_API_KEY="sk-..."   # or add to .env
 
-# Run one submission
+# Run one submission (JSON)
 python main.py dataset/fc3e4000/submission.json
 
-# Run all
+# Run one document directly (PDF/DOCX/XLSX/TXT — no JSON needed)
+python main.py path/to/document.pdf
+
+# Run all dataset submissions
 python main.py
 
 # Serverless entrypoint
 python handler.py '{"submission_id":"fc3e4000"}'
 ```
 
-## Dashboard
-
-Run two terminals from the project root:
-
-```bash
-# Terminal 1 — API
-uvicorn api:app --reload
-
-# Terminal 2 — UI
-cd frontend && npm install && npm run dev
-```
-
-Open `http://localhost:5173`.
-
-| Route | Description |
-|---|---|
-| `/` | Stats cards, distribution donut, 7-day trend, recent submissions |
-| `/submissions` | Searchable, filterable table of all assessments |
-| `/submissions/:id` | Full detail: dimension scores chart, key findings, reviewer action panel |
-| `/submit` | Drag-and-drop upload form with multi-file document attachments |
-
-<img width="1465" height="803" alt="Dashboard" src="https://github.com/user-attachments/assets/f57dc88f-a29f-4eaa-8644-744123f924f9" />
-
-<img width="1464" height="803" alt="Submissions" src="https://github.com/user-attachments/assets/28b0f4be-d208-4036-98da-d71d19ed4156" />
-
-<img width="1465" height="804" alt="Detail" src="https://github.com/user-attachments/assets/4b77be9f-4e1b-44af-a09b-5f4a1f3a193b" />
-
 ## Tests
 
 ```bash
-pytest tests/ -v   # 28 tests, all passing
+pytest tests/ -v   # 29 tests, all passing
 ```
 
 Covers: `score_profile` (all four authorization paths, criminal-flag override, missing-doc penalty, composite clamping, fail-closed unknown values), `get_authorization_level` (threshold boundaries, hard-rule overrides), `ReviewerOverride` validators (ACCEPTED requires reviewer_id, OVERRIDDEN requires both reviewer_id and override_level), and `RiskProfile` enum rejection for all five categorical dimensions.

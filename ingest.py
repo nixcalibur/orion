@@ -1,3 +1,4 @@
+import hashlib
 import io
 import json
 import logging
@@ -128,8 +129,21 @@ def _apply_total_budget(docs: dict) -> dict:
 # ── Public entry point ────────────────────────────────────────────────────────
 
 def ingest(submission_path):
-    with open(submission_path) as f:
-        submission = json.load(f)
+    try:
+        with open(submission_path) as f:
+            submission = json.load(f)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        # Not JSON — treat as a standalone document submission
+        name = os.path.basename(submission_path)
+        sid = hashlib.sha256(submission_path.encode()).hexdigest()[:8]
+        log.info(f"Non-JSON input: treating '{name}' as a standalone document (submission_id={sid})")
+        submission = {
+            "submission_id": sid,
+            "applicant_name": None,
+            "jurisdiction": None,
+            "declared_activities": [],
+            "document_refs": [submission_path],
+        }
 
     docs = {}
     for ref in submission.get("document_refs", []):
