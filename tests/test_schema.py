@@ -106,3 +106,13 @@ def test_risk_profile_defaults_empty_lists():
     assert p.activities_verified == []
     assert p.activities_undeclared == []
     assert p.key_findings == []
+    assert p.evidence == {}
+
+
+def test_risk_profile_with_evidence():
+    p = RiskProfile(**{**VALID_PROFILE, "evidence": {
+        "ownership": {"source_document": "structure.pdf", "excerpt": "The UBO is a trust..."}
+    }})
+    assert p.evidence["ownership"].source_document == "structure.pdf"
+    assert p.evidence["ownership"].excerpt == "The UBO is a trust..."
+    assert p.evidence["ownership"].supporting_details is None

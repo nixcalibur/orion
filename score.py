@@ -1,3 +1,13 @@
+import logging
+import os
+
+log = logging.getLogger(__name__)
+
+# Authorization thresholds on the 0–10 composite scale. Override via env for tuning.
+THRESHOLD_REJECT = float(os.getenv("ORION_THRESHOLD_REJECT", "9.0"))
+THRESHOLD_DEFER = float(os.getenv("ORION_THRESHOLD_DEFER", "4.5"))
+THRESHOLD_CONDITIONAL = float(os.getenv("ORION_THRESHOLD_CONDITIONAL", "2.0"))
+
 DIMENSION_SCORES = {
     "ownership":          {"clear": 0, "complex": 2,   "opaque": 3},
     "aml_present":        {True: 0,    False: 3},
@@ -10,7 +20,14 @@ DIMENSION_SCORES = {
 }
 
 MISSING_DOC_PENALTY = 0.5
-MAX_RAW_SCORE = sum(max(v.values()) for v in DIMENSION_SCORES.values())
+
+# Hard-override dimensions short-circuit scoring (see get_authorization_level),
+# so exclude them from the normalization base — otherwise they dilute every
+# composite with points that never participate in a scored decision.
+HARD_OVERRIDE_DIMS = {"has_criminal_flag"}
+MAX_RAW_SCORE = sum(
+    max(v.values()) for k, v in DIMENSION_SCORES.items() if k not in HARD_OVERRIDE_DIMS
+)
 
 
 def score_profile(profile):
@@ -19,7 +36,11 @@ def score_profile(profile):
 
     for dim, weights in DIMENSION_SCORES.items():
         value = profile.get(dim)
-        s = weights.get(value, 0)
+        s = weights.get(value)
+        if s is None:
+            # Fail closed: unknown/missing value scores worst case for the dimension
+            s = max(weights.values())
+            log.warning(f"Unknown value for '{dim}': {value!r} — scoring worst case ({s})")
         dim_scores[dim] = s
         raw += s
 
@@ -41,11 +62,11 @@ def get_authorization_level(composite, profile=None):
         if profile.get("regulatory_history") == "major_issues":
             return "REJECT"
 
-    if composite >= 9.0:
+    if composite >= THRESHOLD_REJECT:
         return "REJECT"
-    elif composite >= 4.5:
+    elif composite >= THRESHOLD_DEFER:
         return "DEFER"
-    elif composite >= 2.0:
+    elif composite >= THRESHOLD_CONDITIONAL:
         return "CONDITIONAL"
     else:
         return "APPROVE"

@@ -65,6 +65,13 @@ class PrivacyRating(str, Enum):
     non_compliant = "non_compliant"
 
 
+class Evidence(BaseModel):
+    """Source citation justifying one dimension classification."""
+    source_document: str
+    excerpt: str
+    supporting_details: Optional[str] = None
+
+
 class RiskProfile(BaseModel):
     ownership: OwnershipType
     aml_present: bool
@@ -78,6 +85,7 @@ class RiskProfile(BaseModel):
     activities_verified: List[str] = []
     activities_undeclared: List[str] = []
     key_findings: List[str] = []
+    evidence: Dict[str, Evidence] = {}
 
 
 class AssessmentResult(BaseModel):

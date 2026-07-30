@@ -3,14 +3,23 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import pytest
-from score import score_profile, get_authorization_level, MAX_RAW_SCORE, DIMENSION_SCORES
+from score import (
+    score_profile,
+    get_authorization_level,
+    MAX_RAW_SCORE,
+    DIMENSION_SCORES,
+    HARD_OVERRIDE_DIMS,
+)
 
 
 # --- MAX_RAW_SCORE derivation ---
 
-def test_max_raw_score_equals_sum_of_dimension_maxes():
-    expected = sum(max(v.values()) for v in DIMENSION_SCORES.values())
+def test_max_raw_score_excludes_hard_override_dimensions():
+    expected = sum(
+        max(v.values()) for k, v in DIMENSION_SCORES.items() if k not in HARD_OVERRIDE_DIMS
+    )
     assert MAX_RAW_SCORE == expected
+    assert "has_criminal_flag" in HARD_OVERRIDE_DIMS
 
 
 # --- score_profile paths ---
@@ -88,10 +97,10 @@ def test_score_profile_composite_clamped_at_10():
     assert composite == 10.0
 
 
-def test_score_profile_unknown_value_scores_zero():
+def test_score_profile_unknown_value_scores_worst_case():
     profile = {**CLEAN_PROFILE, "ownership": "unknown_value"}
     dim_scores, _ = score_profile(profile)
-    assert dim_scores["ownership"] == 0
+    assert dim_scores["ownership"] == max(DIMENSION_SCORES["ownership"].values())
 
 
 # --- get_authorization_level thresholds ---
