@@ -88,10 +88,10 @@ def test_score_profile_composite_clamped_at_10():
     assert composite == 10.0
 
 
-def test_score_profile_unknown_value_scores_zero():
+def test_score_profile_unknown_value_scores_worst_case():
     profile = {**CLEAN_PROFILE, "ownership": "unknown_value"}
     dim_scores, _ = score_profile(profile)
-    assert dim_scores["ownership"] == 0
+    assert dim_scores["ownership"] == max(DIMENSION_SCORES["ownership"].values())
 
 
 # --- get_authorization_level thresholds ---

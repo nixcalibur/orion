@@ -48,15 +48,35 @@ def run_pipeline(submission_path):
         return None
     log.info(f"Profile: {json.dumps(profile)}")
 
-    # 3. Score dimensions and compute composite
+    # 3. Validate profile against schema BEFORE scoring (fail closed on bad LLM output).
+    #    Pydantic ignores the extra "_"-prefixed metadata keys at this stage.
+    try:
+        risk_profile = RiskProfile(**profile)
+    except ValidationError as e:
+        log.error(f"RiskProfile validation failed: {e}")
+        write_audit_record(
+            submission=submission,
+            docs=docs,
+            profile=profile,
+            dim_scores={},
+            composite=0.0,
+            authorization="",
+            followup_questions=[],
+            model=profile.get("_model", "unknown"),
+            system_fingerprint=profile.get("_fp"),
+            status="error",
+        )
+        return None
+
+    # 4. Score dimensions and compute composite
     dim_scores, composite = score_profile(profile)
     authorization = get_authorization_level(composite, profile)
     log.info(f"Composite score: {composite} → {authorization}")
 
-    # 4. Generate follow-up questions
+    # 5. Generate follow-up questions
     questions = generate_followup_questions(profile, submission)
 
-    # 5. Write audit record before building result
+    # 6. Write audit record before building result
     write_audit_record(
         submission=submission,
         docs=docs,
@@ -71,13 +91,7 @@ def run_pipeline(submission_path):
     profile.pop("_prompt_hash", None)
     profile.pop("_extraction_params", None)
 
-    # 6. Build and validate reviewer-ready result (profile is clean of metadata now)
-    try:
-        risk_profile = RiskProfile(**profile)
-    except ValidationError as e:
-        log.error(f"RiskProfile validation failed: {e}")
-        return None
-
+    # 7. Build reviewer-ready result (profile is clean of metadata now)
     result = AssessmentResult(
         submission_id=submission["submission_id"],
         applicant_name=submission.get("applicant_name"),
@@ -95,7 +109,7 @@ def run_pipeline(submission_path):
     )
     log.info("Output validated against schema")
 
-    # 7. Deliver to external review API
+    # 8. Deliver to external review API
     input_hash = _hash_inputs(submission, docs)
     try:
         deliver(result.model_dump_json(), submission_id=submission["submission_id"], input_hash=input_hash)
@@ -131,4 +145,4 @@ if __name__ == "__main__":
     for path in paths:
         result = run_pipeline(path)
         if result:
-            print(result.json(indent=2))
+            print(result.model_dump_json(indent=2))
