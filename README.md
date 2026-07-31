@@ -34,7 +34,11 @@ ORION cuts that to minutes and makes the reasoning explicit.
 | **Prompt isolation** | Document content is wrapped in `<document>` XML tags with explicit instructions to treat tag content as data, not commands. Mitigates prompt injection from adversarial documents. |
 | **JSONL audit log** | Append-only. Each line is one run. Includes `commit_sha`, `model`, `system_fingerprint`, `prompt_hash`, and `extraction_params`. Enough to replay or debug any decision. |
 | **Retry + idempotency** | LLM extraction retries on rate-limit/connection errors with exponential backoff. Delivery uses stable idempotency keys so duplicate POSTs are safe. |
-| **Majority-vote extraction** | LLMs are nondeterministic even at temperature 0 — single-run accuracy swung ±13 points between identical runs. Extraction now runs N passes (default 3, `ORION_EXTRACTION_VOTES`), votes per scalar field (ties fail closed), and takes list fields from the run closest to the merged result. Run-to-run accuracy is now stable. |
+| **Majority-vote extraction** | LLMs are nondeterministic even at temperature 0 — single-run accuracy swung ±13 points between identical runs. Extraction runs N passes (default 3, `ORION_EXTRACTION_VOTES`) with a distinct seed per pass (`SEED+i`, temperature stays 0) so votes are independent draws. Scalar fields vote (ties fail closed); list fields come from the run closest to the merged result. Set `ORION_EXTRACTION_VOTES=1` for cheap local runs at the cost of stability. |
+| **Evidence verification** | Every evidence excerpt is checked against the ingested document text (case/whitespace-insensitive substring). Citations that don't match their named source are dropped with a warning — never replaced with invented ones. |
+| **Explicit delivery status** | Every result and audit record carries `delivery: {status: success|failed|skipped, detail}`. Set `REVIEW_API_URL=""` to skip delivery; the default httpbin URL keeps the CLI demoable. Delivery failures are recorded, never silently swallowed. |
+| **Ingestion honesty** | The audit record carries `ingest: {truncated_docs, total_budget_trimmed}` so a reviewer can see when evidence may be incomplete. Char budgets unchanged (12k/doc, 48k total). |
+| **Durable review store** | Latest assessment per submission is dual-written to SQLite (`ORION_DB_PATH`, default `data/orion.db`) alongside `audit.jsonl`. Reviewer accepts/overrides persist via a thin FastAPI surface (`api.py`): `GET /health`, `GET /assessments/{id}`, `POST /assessments/{id}/review`. Set `ORION_API_KEY` to require `Authorization: Bearer <key>` or `X-API-Key` on assessment routes; unset keeps open local access. `/health` stays open. |
 | **Pydantic v2 schema** | Output contract validated before any result leaves the pipeline. `ReviewerOverride` cross-field validators enforce that overridden decisions include a reviewer ID and new level. |
 | **Evidence attribution** | Each risk dimension classification includes a source document name and verbatim excerpt justifying it. Stored in the audit log, part of the pipeline output. |
 | **Standalone document mode** | No JSON wrapper required. Point the pipeline at any `.pdf`, `.docx`, `.xlsx`, or `.txt` and it auto-wraps it into a submission. |
@@ -51,17 +55,19 @@ ORION cuts that to minutes and makes the reasoning explicit.
 | Privacy compliance | compliant (0), partial (0.5), non-compliant (1) |
 | Has PEP | false (0), true (1) |
 | Has criminal flag | false (0), true (4) |
-| Missing documents | +0.5 per doc |
+| Missing documents | +0.5 per doc, capped at 5 |
 
 Composite score = `(raw / max_raw) * 10`, clamped to 0–10.
 
 Hard overrides: criminal flag or major regulatory history → `REJECT`, regardless of score.
 
+Normalization-base rule: a dimension is excluded from `max_raw` only when none of its values participate in a scored decision. `has_criminal_flag` qualifies (False scores 0, True hard-rejects before the composite is used), so its 4 points stay out of the base. `regulatory_history` stays in because `minor_issues` scores normally without triggering the override. The missing-docs penalty is capped so an unbounded LLM list can't dominate the score.
+
 Authorization thresholds (`REJECT` ≥ 9.0, `DEFER` ≥ 4.5, `CONDITIONAL` ≥ 2.0) are tunable via `ORION_THRESHOLD_REJECT`, `ORION_THRESHOLD_DEFER`, `ORION_THRESHOLD_CONDITIONAL` env vars.
 
 ## Evaluation
 
-23 labeled submissions with ground-truth authorization levels:
+23 labeled in-sample submissions with ground-truth authorization levels (used to calibrate the extraction rubric):
 
 | Level | Count |
 |---|---|
@@ -70,23 +76,33 @@ Authorization thresholds (`REJECT` ≥ 9.0, `DEFER` ≥ 4.5, `CONDITIONAL` ≥ 2
 | REJECT | 3 |
 | APPROVE | 2 |
 
+Plus 2 synthetic **held-out** packs (`dataset/held_out_pep`, `dataset/held_out_major`) listed in `dataset/held_out.json`. These exercise PEP-missing-EDD and major-regulatory rules with fresh wording and were **not** used to tune prompt phrasing.
+
 Run evaluation:
 
 ```bash
 python evaluate.py
 ```
 
-Compares predicted vs. expected authorization level per submission, then prints overall accuracy, per-class accuracy, a misclassification breakdown, and how often the composite score lands inside the ground-truth `expected_composite_range`.
+Compares predicted vs. expected authorization level per submission, then prints overall accuracy, in-sample vs held-out accuracy (when the manifest is present), per-class accuracy, a misclassification breakdown, and how often the composite score lands inside the ground-truth `expected_composite_range`.
 
 ### Measured results (gpt-4o-mini, majority vote ×3)
 
 ```
-Accuracy: 14/23 (61%)  — stable across repeated runs
-Per-class: APPROVE 2/2, CONDITIONAL 4/10, DEFER 7/8, REJECT 2/3
-Composite within expected range: 11/20
+Accuracy: 23/23 (100%)   # in-sample labeled set — calibrated to these labels
+Per-class: APPROVE 2/2, CONDITIONAL 10/10, DEFER 8/8, REJECT 3/3
+Composite within expected range: 9/20
 ```
 
-Residual failures are systematic rubric disagreements, not variance: the model consistently judges PEP handling described inside an AML policy as sufficient (ground truth demands a dedicated EDD document), and rates some regulatory histories `minor_issues` where labels say `major_issues`. Closing that gap means encoding the labelers' exact rubric in the prompt — calibration work, not a bug.
+**This is not “solved.”** 100% on the in-sample set means the prompt rubric was calibrated to these 23 labels. Treat held-out accuracy from `evaluate.py` as the more honest generalization check; re-run after any prompt edit. Use `ORION_EXTRACTION_VOTES=1` for cheap smoke runs.
+
+Getting here required encoding the review rubric explicitly in the prompt. The three calibration rules that mattered:
+
+1. **Claimed vs. attached evidence** — a document stating evidence is "on record" is not the evidence; if the actual file isn't in the submission, it's missing.
+2. **PEP conditional rule** — if `has_pep` is true and no dedicated EDD document is attached, it MUST appear in `missing_docs` (a policy section mentioning PEP handling doesn't count).
+3. **Regulatory severity** — `major_issues` = sanctions/enforcement/suspension/ongoing investigations; `minor_issues` = administrative penalties fully remediated and closed. When in doubt, choose major.
+
+Composite scores land inside the labelers' expected ranges less often (9/20) — the ranges reflect human severity intuition, while composites follow the deterministic formula. Classification decisions are what the system is scored on; do not retune dimension weights just to chase range hits.
 
 ## Repository structure
 
@@ -98,14 +114,16 @@ Residual failures are systematic rubric disagreements, not variance: the model c
 - `extract.py` — majority-vote LLM extraction (N passes, per-field vote, fail-closed ties); retry on rate-limit/connection errors; XML-delimited documents for prompt injection mitigation; per-dimension evidence citations
 - `score.py` — deterministic dimension scoring, composite normalization, env-configurable authorization thresholds, follow-up question generator
 - `schema.py` — Pydantic v2 models (`RiskProfile`, `Evidence`, `AssessmentResult`, `ReviewerOverride`) with cross-field validators
-- `audit.py` — append-only JSONL audit records with input hash, commit SHA, model fingerprint, prompt hash
-- `deliver.py` — POST results to external review API with 4-retry exponential backoff and idempotency keys
+- `audit.py` — append-only JSONL audit records with input hash, commit SHA, model fingerprint, prompt hash, delivery outcome, ingest flags
+- `deliver.py` — POST results to external review API with 4-retry exponential backoff and idempotency keys; explicit success/failed/skipped outcomes
+- `db.py` — thin SQLite layer: latest assessment per submission + persisted reviewer decisions
+- `api.py` — minimal FastAPI surface over the store (`GET /health`, `GET /assessments/{id}`, `POST /assessments/{id}/review`)
 - `evaluate.py` — batch evaluation harness with accuracy report and confusion breakdown
 
 **Other**
 
-- `dataset/` — 23 sample submissions with ground truth labels
-- `tests/` — 36 pytest tests covering all scoring paths, authorization levels, schema validators, edge cases, evidence attribution, and vote/merge logic
+- `dataset/` — 23 in-sample labeled submissions + 2 held-out packs (`held_out.json` manifest)
+- `tests/` — pytest covering scoring paths, authorization levels, schema validators, evidence attribution + verification (incl. path basename matching), vote/merge logic, delivery outcomes, ingest flags, SQLite store, optional API auth, and verify-before-validate order
 - `.github/workflows/ci.yml` — GitHub Actions: runs the test suite on every push and PR
 
 ## Quick start
@@ -126,17 +144,21 @@ python main.py
 
 # Serverless entrypoint
 python handler.py '{"submission_id":"fc3e4000"}'
+
+# HTTP surface for assessments + reviews (optional)
+# Set ORION_API_KEY in .env to require Bearer / X-API-Key on assessment routes
+uvicorn api:app --reload
 ```
 
 ## Tests
 
 ```bash
-pytest tests/ -v   # 36 tests, all passing
+pytest tests/ -v
 ```
 
 Runs in CI on every push via GitHub Actions.
 
-Covers: `score_profile` (all four authorization paths, criminal-flag override, missing-doc penalty, composite clamping, fail-closed unknown values), `get_authorization_level` (threshold boundaries, hard-rule overrides), `ReviewerOverride` validators (ACCEPTED requires reviewer_id, OVERRIDDEN requires both reviewer_id and override_level), `RiskProfile` enum rejection for all five categorical dimensions, and `Evidence` citation parsing.
+Covers: `score_profile` (all four authorization paths, criminal-flag override, missing-doc penalty, composite clamping, fail-closed unknown values), `get_authorization_level` (threshold boundaries, hard-rule overrides), `ReviewerOverride` validators (ACCEPTED requires reviewer_id, OVERRIDDEN requires both reviewer_id and override_level), `RiskProfile` enum rejection for all five categorical dimensions, `Evidence` citation parsing + verification (basename / ambiguous source matching), optional API key auth, and pipeline order (verify evidence before `RiskProfile` validation).
 
 ## Docker
 
@@ -159,12 +181,14 @@ Each pipeline run appends one JSON line to `audit.jsonl`:
   "model": "gpt-4o-mini-2024-07-18",
   "system_fingerprint": "fp_c881474fd1",
   "prompt_hash": "4664616476...",
-  "extraction_params": {"temperature": 0, "seed": 42},
+  "extraction_params": {"temperature": 0, "seeds": [42, 43, 44], "votes": 3},
   "extracted_profile": { "evidence": { "ownership": { "source_document": "...", "excerpt": "..." } } },
   "dimension_scores": { ... },
   "composite_score": 3.94,
   "authorization_level": "CONDITIONAL",
-  "followup_questions": [ ... ]
+  "followup_questions": [ ... ],
+  "delivery": {"status": "success", "detail": "HTTP 200"},
+  "ingest": {"truncated_docs": ["terms_and_conditions.txt"], "total_budget_trimmed": false}
 }
 ```
 

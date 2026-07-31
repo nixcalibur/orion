@@ -1,0 +1,4 @@
+{
+  "submission_ids": ["held_out_pep", "held_out_major"],
+  "note": "Synthetic packs reserved for held-out reporting. Not used to tune prompt wording."
+}

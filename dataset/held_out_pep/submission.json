@@ -1,0 +1,16 @@
+{
+  "submission_id": "held_out_pep",
+  "applicant_name": "Rivergate Payments Ltd",
+  "jurisdiction": "Lithuania",
+  "declared_activities": ["payment processing"],
+  "incorporation_date": "2019-06-12",
+  "key_personnel": [
+    {"name": "Helena Varga", "role": "CEO", "nationality": "HU"},
+    {"name": "Omar Hassan", "role": "MLRO", "nationality": "EG"}
+  ],
+  "document_refs": [
+    "dataset/held_out_pep/docs/aml_policy.txt",
+    "dataset/held_out_pep/docs/ownership.txt",
+    "dataset/held_out_pep/docs/financials.txt"
+  ]
+}

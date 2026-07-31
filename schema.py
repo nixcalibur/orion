@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator, model_validator, ValidationInfo
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Dict, List, Optional
 from datetime import datetime
 from enum import Enum
@@ -72,6 +72,18 @@ class Evidence(BaseModel):
     supporting_details: Optional[str] = None
 
 
+class DeliveryStatus(str, Enum):
+    SUCCESS = "success"
+    FAILED = "failed"
+    SKIPPED = "skipped"
+
+
+class DeliveryInfo(BaseModel):
+    """Outcome of the external review API delivery attempt."""
+    status: DeliveryStatus
+    detail: Optional[str] = None
+
+
 class RiskProfile(BaseModel):
     ownership: OwnershipType
     aml_present: bool
@@ -102,6 +114,7 @@ class AssessmentResult(BaseModel):
     followup_questions: List[str] = []
     key_findings: List[str] = []
     review: Optional[ReviewerOverride] = None
+    delivery: Optional[DeliveryInfo] = None
 
     @field_validator("composite_score", mode="after")
     @classmethod

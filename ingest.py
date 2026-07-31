@@ -38,13 +38,23 @@ def _fetch_local(path: str) -> bytes:
         return f.read()
 
 
+# Local file reads are confined to this base (project root by default). Set
+# ORION_DOCS_DIR to narrow it. Prevents path traversal via user-supplied refs.
+ALLOWED_DOC_BASE = os.path.realpath(os.getenv("ORION_DOCS_DIR", os.getcwd()))
+
+
 def _resolve_ref(ref: str) -> str:
-    """Resolve a ref to an absolute path when it is relative (from CWD / project root)."""
+    """Resolve a ref to an absolute path, blocking escapes outside the allowed base."""
     if ref.startswith("s3://") or ref.startswith("gs://"):
         return ref
-    if not os.path.isabs(ref):
-        return os.path.join(os.getcwd(), ref)
-    return ref
+    resolved = ref if os.path.isabs(ref) else os.path.join(os.getcwd(), ref)
+    resolved = os.path.realpath(resolved)
+    try:
+        if os.path.commonpath([resolved, ALLOWED_DOC_BASE]) != ALLOWED_DOC_BASE:
+            raise ValueError(f"Path outside allowed docs directory: {ref}")
+    except ValueError:
+        raise ValueError(f"Path outside allowed docs directory: {ref}")
+    return resolved
 
 
 def _fetch(ref: str) -> bytes:
@@ -101,14 +111,15 @@ def _truncate(name: str, text: str) -> str:
     return kept + f"\n\n[TRUNCATED: {dropped} additional characters omitted]"
 
 
-def _apply_total_budget(docs: dict) -> dict:
+def _apply_total_budget(docs: dict) -> tuple:
     """
     If the combined text across all docs exceeds TOTAL_CHAR_LIMIT,
     trim the longest documents first until the total fits.
+    Returns (docs, trimmed) so callers can flag that evidence may be incomplete.
     """
     total = sum(len(v) for v in docs.values())
     if total <= TOTAL_CHAR_LIMIT:
-        return docs
+        return docs, False
 
     log.warning(
         f"Total doc size {total} chars exceeds budget {TOTAL_CHAR_LIMIT}; trimming."
@@ -123,7 +134,7 @@ def _apply_total_budget(docs: dict) -> dict:
             current[:trim_to]
             + f"\n\n[TRUNCATED: {dropped} additional characters omitted]"
         )
-    return result
+    return result, True
 
 
 # ── Public entry point ────────────────────────────────────────────────────────
@@ -146,19 +157,26 @@ def ingest(submission_path):
         }
 
     docs = {}
+    truncated_docs = []
     for ref in submission.get("document_refs", []):
-        resolved = _resolve_ref(ref)
-        name = os.path.basename(resolved)
         try:
+            resolved = _resolve_ref(ref)
+            name = os.path.basename(resolved)
             raw = _fetch(resolved)
             text = _parse(name, raw)
+            if len(text) > DOC_CHAR_LIMIT:
+                truncated_docs.append(name)
             docs[name] = _truncate(name, text)
         except FileNotFoundError:
             log.warning(f"Document not found, skipping: {resolved}")
-            docs[name] = "[MISSING: document could not be located]"
+            docs[os.path.basename(ref)] = "[MISSING: document could not be located]"
+        except ValueError as e:
+            log.error(f"Document ref rejected: {e}")
+            docs[os.path.basename(ref)] = "[BLOCKED: path outside allowed docs directory]"
         except Exception as e:
             log.error(f"Failed to load {resolved}: {e}")
-            docs[name] = ""
+            docs[os.path.basename(ref)] = ""
 
-    docs = _apply_total_budget(docs)
-    return submission, docs
+    docs, budget_trimmed = _apply_total_budget(docs)
+    meta = {"truncated_docs": truncated_docs, "total_budget_trimmed": budget_trimmed}
+    return submission, docs, meta

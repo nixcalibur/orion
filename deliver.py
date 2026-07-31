@@ -8,7 +8,8 @@ import uuid
 
 log = logging.getLogger(__name__)
 
-REVIEW_API_URL = os.getenv("REVIEW_API_URL", "https://httpbin.org/post")
+# Demo default keeps the CLI usable out of the box. Set REVIEW_API_URL="" to skip.
+DEFAULT_REVIEW_API_URL = "https://httpbin.org/post"
 
 # Retry config
 MAX_ATTEMPTS = 4
@@ -35,10 +36,15 @@ def deliver(result_json: str, submission_id: str = "", input_hash: str = "") -> 
     """
     POST the assessment result to the external review API.
 
+    Returns an outcome dict: {"outcome": "success"|"skipped", "detail": ...}.
     Retries transient failures with exponential backoff.
     Raises DeliveryError on non-retriable failures or exhausted retries.
     """
-    url = REVIEW_API_URL
+    url = os.getenv("REVIEW_API_URL", DEFAULT_REVIEW_API_URL)
+    if not url:
+        log.info("REVIEW_API_URL not set — delivery skipped")
+        return {"outcome": "skipped", "detail": "REVIEW_API_URL not set"}
+
     data = result_json.encode("utf-8")
     idem_key = _idempotency_key(submission_id, input_hash) if submission_id else str(uuid.uuid4())
 
@@ -59,7 +65,7 @@ def deliver(result_json: str, submission_id: str = "", input_hash: str = "") -> 
                     f"Delivered to review API | url={url} status={status} "
                     f"attempt={attempt+1} idempotency_key={idem_key}"
                 )
-                return {"status": status, "response": json.loads(body)}
+                return {"outcome": "success", "detail": f"HTTP {status}", "status_code": status, "response": json.loads(body)}
 
         except urllib.error.HTTPError as e:
             retriable = e.code in RETRIABLE_STATUSES

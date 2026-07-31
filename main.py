@@ -6,10 +6,11 @@ from datetime import datetime, timezone
 from pydantic import ValidationError
 
 from ingest import ingest
-from extract import extract_profile
+from extract import extract_profile, verify_evidence
 from score import score_profile, get_authorization_level, generate_followup_questions
-from schema import AssessmentResult, ReviewerOverride, ReviewStatus, RiskProfile
+from schema import AssessmentResult, DeliveryInfo, DeliveryStatus, ReviewerOverride, ReviewStatus, RiskProfile
 from audit import write_audit_record, _hash_inputs
+from db import store_assessment
 from deliver import deliver, DeliveryError
 
 logging.basicConfig(
@@ -23,7 +24,7 @@ def run_pipeline(submission_path):
     log.info(f"Starting ORION pipeline for: {submission_path}")
 
     # 1. Ingest submission + documents
-    submission, docs = ingest(submission_path)
+    submission, docs, ingest_meta = ingest(submission_path)
     log.info(
         f"Loaded submission '{submission['submission_id']}' "
         f"with {len(docs)} document(s)"
@@ -44,11 +45,16 @@ def run_pipeline(submission_path):
             followup_questions=[],
             model="unknown",
             status="error",
+            ingest_meta=ingest_meta,
         )
         return None
     log.info(f"Profile: {json.dumps(profile)}")
 
-    # 3. Validate profile against schema BEFORE scoring (fail closed on bad LLM output).
+    # 2b. Verify evidence citations against ingested document text
+    #    BEFORE RiskProfile validation — never validate/score unverified excerpts.
+    profile = verify_evidence(profile, docs)
+
+    # 3. Validate verified profile against schema BEFORE scoring (fail closed on bad LLM output).
     #    Pydantic ignores the extra "_"-prefixed metadata keys at this stage.
     try:
         risk_profile = RiskProfile(**profile)
@@ -65,6 +71,7 @@ def run_pipeline(submission_path):
             model=profile.get("_model", "unknown"),
             system_fingerprint=profile.get("_fp"),
             status="error",
+            ingest_meta=ingest_meta,
         )
         return None
 
@@ -76,22 +83,13 @@ def run_pipeline(submission_path):
     # 5. Generate follow-up questions
     questions = generate_followup_questions(profile, submission)
 
-    # 6. Write audit record before building result
-    write_audit_record(
-        submission=submission,
-        docs=docs,
-        profile=profile,
-        dim_scores=dim_scores,
-        composite=composite,
-        authorization=authorization,
-        followup_questions=questions,
-        model=profile.pop("_model", "unknown"),
-        system_fingerprint=profile.pop("_fp", None),
-    )
-    profile.pop("_prompt_hash", None)
-    profile.pop("_extraction_params", None)
+    # 6. Pull LLM metadata out of the profile (profile is clean for the result)
+    model = profile.pop("_model", "unknown")
+    system_fingerprint = profile.pop("_fp", None)
+    prompt_hash = profile.pop("_prompt_hash", None)
+    extraction_params = profile.pop("_extraction_params", None)
 
-    # 7. Build reviewer-ready result (profile is clean of metadata now)
+    # 7. Build reviewer-ready result
     result = AssessmentResult(
         submission_id=submission["submission_id"],
         applicant_name=submission.get("applicant_name"),
@@ -109,12 +107,39 @@ def run_pipeline(submission_path):
     )
     log.info("Output validated against schema")
 
-    # 8. Deliver to external review API
+    # 8. Deliver to external review API — outcome is explicit, never assumed
     input_hash = _hash_inputs(submission, docs)
     try:
-        deliver(result.model_dump_json(), submission_id=submission["submission_id"], input_hash=input_hash)
+        outcome = deliver(result.model_dump_json(), submission_id=submission["submission_id"], input_hash=input_hash)
+        status = DeliveryStatus.SUCCESS if outcome["outcome"] == "success" else DeliveryStatus.SKIPPED
+        result.delivery = DeliveryInfo(status=status, detail=outcome.get("detail"))
     except DeliveryError as e:
         log.error(f"Delivery failed | retriable={e.retriable} status={e.status_code} error={e}")
+        result.delivery = DeliveryInfo(status=DeliveryStatus.FAILED, detail=str(e))
+
+    # 9. Write audit record (includes delivery outcome)
+    write_audit_record(
+        submission=submission,
+        docs=docs,
+        profile=profile,
+        dim_scores=dim_scores,
+        composite=composite,
+        authorization=authorization,
+        followup_questions=questions,
+        model=model,
+        system_fingerprint=system_fingerprint,
+        prompt_hash=prompt_hash,
+        extraction_params=extraction_params,
+        delivery=result.delivery.model_dump(),
+        ingest_meta=ingest_meta,
+    )
+
+    # 10. Persist latest assessment (dual-write with audit.jsonl; never fatal)
+    store_assessment(
+        submission["submission_id"],
+        result.assessed_at.isoformat(),
+        result.model_dump_json(),
+    )
 
     return result
 

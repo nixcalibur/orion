@@ -1,0 +1,16 @@
+{
+  "submission_id": "held_out_major",
+  "applicant_name": "Northline Custody AG",
+  "jurisdiction": "Switzerland",
+  "declared_activities": ["crypto-asset custody", "settlement"],
+  "incorporation_date": "2016-02-01",
+  "key_personnel": [
+    {"name": "Lars Meier", "role": "CEO", "nationality": "CH"},
+    {"name": "Ines Dubois", "role": "CFO", "nationality": "FR"}
+  ],
+  "document_refs": [
+    "dataset/held_out_major/docs/aml_policy.txt",
+    "dataset/held_out_major/docs/ownership.txt",
+    "dataset/held_out_major/docs/financials.txt"
+  ]
+}

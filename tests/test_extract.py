@@ -2,7 +2,70 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from extract import _merge_profiles, _vote_scalar
+from extract import _merge_profiles, _vote_scalar, verify_evidence
+
+
+# --- verify_evidence ---
+
+DOCS = {"policy.pdf": "The AML / CFT Policy applies to all staff.\nRecords are retained for 5 years."}
+
+
+def test_verify_evidence_keeps_valid_excerpt():
+    profile = {"evidence": {"aml_present": {"source_document": "policy.pdf", "excerpt": "applies to all staff"}}}
+    out = verify_evidence(profile, DOCS)
+    assert "aml_present" in out["evidence"]
+
+
+def test_verify_evidence_strips_hallucinated_excerpt():
+    profile = {"evidence": {"ownership": {"source_document": "policy.pdf", "excerpt": "The UBO is a Panamanian trust"}}}
+    out = verify_evidence(profile, DOCS)
+    assert out["evidence"] == {}
+
+
+def test_verify_evidence_unknown_document_dropped():
+    profile = {"evidence": {"cyber": {"source_document": "nonexistent.pdf", "excerpt": "anything"}}}
+    out = verify_evidence(profile, DOCS)
+    assert out["evidence"] == {}
+
+
+def test_verify_evidence_case_and_whitespace_insensitive():
+    profile = {"evidence": {"privacy": {"source_document": "policy.pdf", "excerpt": "  RECORDS   ARE  RETAINED\nfor 5 years "}}}
+    out = verify_evidence(profile, DOCS)
+    assert "privacy" in out["evidence"]
+
+
+def test_verify_evidence_malformed_entry_dropped():
+    profile = {"evidence": {"cyber": "not-a-dict"}}
+    out = verify_evidence(profile, DOCS)
+    assert out["evidence"] == {}
+
+
+def test_verify_evidence_full_path_citation_resolved_by_basename():
+    profile = {"evidence": {"aml_present": {"source_document": "dataset/docs/policy.pdf", "excerpt": "applies to all staff"}}}
+    out = verify_evidence(profile, DOCS)
+    assert "aml_present" in out["evidence"]
+
+
+def test_verify_evidence_hallucinated_excerpt_stripped_with_full_path():
+    profile = {"evidence": {"ownership": {"source_document": "x/y/policy.pdf", "excerpt": "The UBO is hidden"}}}
+    out = verify_evidence(profile, DOCS)
+    assert out["evidence"] == {}
+
+
+def test_verify_evidence_case_insensitive_basename():
+    profile = {"evidence": {"aml_present": {"source_document": "POLICY.PDF", "excerpt": "applies to all staff"}}}
+    out = verify_evidence(profile, DOCS)
+    assert "aml_present" in out["evidence"]
+
+
+def test_verify_evidence_ambiguous_basename_dropped():
+    docs = {
+        "a/report.txt": "alpha content",
+        "b/report.txt": "beta content",
+    }
+    profile = {"evidence": {"cyber": {"source_document": "report.txt", "excerpt": "alpha content"}}}
+    out = verify_evidence(profile, docs)
+    assert out["evidence"] == {}
 
 
 # --- _vote_scalar ---
@@ -50,3 +113,56 @@ def test_merge_profiles_lists_from_best_agreeing_run():
     # merged scalars: ownership=clear, aml=True → run a agrees fully, first maximal wins
     assert merged["missing_docs"] == ["a-doc"]
     assert merged["evidence"] == {"x": 1}
+
+
+# --- vote diversity: distinct seeds per pass ---
+
+class _FakeMessage:
+    def __init__(self, content):
+        self.content = content
+
+
+class _FakeResponse:
+    def __init__(self):
+        self.choices = [type("Choice", (), {"message": _FakeMessage('{"ownership": "clear"}')})]
+        self.model = "test-model"
+        self.system_fingerprint = "fp_test"
+
+
+class _FakeCompletions:
+    def __init__(self):
+        self.calls = []
+
+    def create(self, **kwargs):
+        self.calls.append(kwargs)
+        return _FakeResponse()
+
+
+class _FakeClient:
+    def __init__(self):
+        self.chat = type("Chat", (), {"completions": _FakeCompletions()})()
+
+
+def test_extraction_passes_use_distinct_seeds(monkeypatch):
+    import extract
+    fake = _FakeClient()
+    monkeypatch.setattr(extract, "_client", fake)
+    extract.extract_profile({"submission_id": "x"}, {})
+    seeds = [c["seed"] for c in fake.chat.completions.calls]
+    assert seeds == [extract.SEED, extract.SEED + 1, extract.SEED + 2]
+    temps = {c["temperature"] for c in fake.chat.completions.calls}
+    assert temps == {0}
+
+
+# --- prompt rubric rules ---
+
+def test_prompt_contains_rubric_rules():
+    import extract
+    prompt = extract._build_prompt({"submission_id": "x"}, "doc text")
+    # PEP EDD requires a dedicated document, not a policy mention
+    assert "dedicated EDD document" in prompt
+    # major vs minor regulatory history distinction
+    assert "enforcement actions" in prompt
+    assert "fully remediated" in prompt
+    # prompt-injection isolation
+    assert "<document>" in prompt

@@ -1,0 +1,15 @@
+{
+  "expected_authorization_level": "REJECT",
+  "expected_composite_range": [8.0, 10.0],
+  "profile": {
+    "ownership": "opaque",
+    "aml_present": false,
+    "regulatory_history": "major_issues",
+    "cyber": "weak",
+    "financial_health": "distressed",
+    "privacy": "partial",
+    "has_pep": false,
+    "has_criminal_flag": false,
+    "missing_docs": ["AML policy"]
+  }
+}

@@ -1,0 +1,13 @@
+Northline Custody AG – Internal Notes
+
+No board-approved AML/CFT policy document exists. Day-to-day screening is
+handled informally by operations staff.
+
+REGULATORY STATUS
+In March 2025 FINMA imposed a license suspension following an on-site review that
+identified unresolved customer-fund segregation failures. An enforcement action
+remains open; the firm has not been restored to active licensed status.
+
+IT SECURITY
+Last external review (2022) rated controls below peer median. No recent
+penetration test report is available in the pack.

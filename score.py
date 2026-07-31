@@ -20,10 +20,15 @@ DIMENSION_SCORES = {
 }
 
 MISSING_DOC_PENALTY = 0.5
+# Cap the missing-docs penalty so an unbounded LLM list can't dominate the score.
+MISSING_DOC_MAX_COUNT = 5
 
-# Hard-override dimensions short-circuit scoring (see get_authorization_level),
-# so exclude them from the normalization base — otherwise they dilute every
-# composite with points that never participate in a scored decision.
+# A dimension is excluded from the normalization base only when NONE of its
+# values participate in a scored decision: has_criminal_flag is either False
+# (0 points) or True (hard REJECT via get_authorization_level, composite
+# discarded), so keeping its 4 points in the base would only dilute every
+# composite. regulatory_history stays in the base because minor_issues
+# (1 point) scores normally without triggering the override.
 HARD_OVERRIDE_DIMS = {"has_criminal_flag"}
 MAX_RAW_SCORE = sum(
     max(v.values()) for k, v in DIMENSION_SCORES.items() if k not in HARD_OVERRIDE_DIMS
@@ -44,7 +49,8 @@ def score_profile(profile):
         dim_scores[dim] = s
         raw += s
 
-    missing_penalty = len(profile.get("missing_docs", [])) * MISSING_DOC_PENALTY
+    missing_count = min(len(profile.get("missing_docs", [])), MISSING_DOC_MAX_COUNT)
+    missing_penalty = missing_count * MISSING_DOC_PENALTY
     dim_scores["missing_docs"] = round(missing_penalty, 2)
     raw += missing_penalty
 

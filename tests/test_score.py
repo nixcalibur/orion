@@ -9,6 +9,8 @@ from score import (
     MAX_RAW_SCORE,
     DIMENSION_SCORES,
     HARD_OVERRIDE_DIMS,
+    MISSING_DOC_PENALTY,
+    MISSING_DOC_MAX_COUNT,
 )
 
 
@@ -79,6 +81,12 @@ def test_score_profile_missing_doc_penalty():
     dim_scores, composite = score_profile(profile)
     assert dim_scores["missing_docs"] == 1.0  # 2 * 0.5
     assert composite > 0.0
+
+
+def test_score_profile_missing_doc_penalty_capped():
+    profile = {**CLEAN_PROFILE, "missing_docs": ["doc"] * 100}
+    dim_scores, _ = score_profile(profile)
+    assert dim_scores["missing_docs"] == MISSING_DOC_MAX_COUNT * MISSING_DOC_PENALTY
 
 
 def test_score_profile_composite_clamped_at_10():

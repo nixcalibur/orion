@@ -36,6 +36,10 @@ def write_audit_record(
     model: str,
     system_fingerprint: str = None,
     status: str = "success",
+    prompt_hash: str = None,
+    extraction_params: dict = None,
+    delivery: dict = None,
+    ingest_meta: dict = None,
 ):
     record = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -46,13 +50,15 @@ def write_audit_record(
         "commit_sha": _commit_sha(),
         "model": model,
         "system_fingerprint": system_fingerprint,
-        "prompt_hash": profile.get("_prompt_hash"),
-        "extraction_params": profile.get("_extraction_params"),
+        "prompt_hash": prompt_hash or profile.get("_prompt_hash"),
+        "extraction_params": extraction_params or profile.get("_extraction_params"),
         "extracted_profile": profile,
         "dimension_scores": dim_scores,
         "composite_score": composite,
         "authorization_level": authorization,
         "followup_questions": followup_questions,
+        "delivery": delivery,
+        "ingest": ingest_meta,
     }
 
     with open(AUDIT_LOG_PATH, "a") as f:
