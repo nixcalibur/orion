@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  api:
+    build: .
+    command: uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+    env_file: .env
+    environment:
+      - ORION_UPLOAD_DIR=/app/uploads
+      # In local/reviewer mode, try external delivery once and fail fast.
+      - ORION_DELIVERY_MAX_ATTEMPTS=1
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - /app/.venv
+      - uploads:/app/uploads
+
+  ui:
+    build: ./ui
+    environment:
+      # Client calls /api; the Vite dev server proxies it to the API service.
+      - VITE_API_URL=/api
+      - ORION_API_URL=http://api:8000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
+volumes:
+  uploads:

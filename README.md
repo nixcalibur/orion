@@ -2,6 +2,45 @@
 
 An AI-assisted compliance review system that reads regulatory submissions, extracts structured risk profiles, and produces auditable authorization recommendations — but a human is always the one who decides.
 
+> **Demo / research prototype:** ORION is built for local walkthroughs and evaluation. It is not a certified production compliance system.
+
+## For reviewers
+
+You do not need the command line. The reviewer UI lets you try a sample submission, upload your own files, watch the assessment run, and accept or override the recommendation.
+
+### Option 1: Docker (one command)
+
+```bash
+# Copy .env.example to .env and add OPENAI_API_KEY first.
+docker-compose up --build
+```
+
+Then open http://localhost:5173 and click **Try a sample submission**.
+
+### Option 2: two terminals
+
+```bash
+# Terminal 1: API server
+pip install -r requirements.txt
+uvicorn api:app --reload
+
+# Terminal 2: UI
+npm install --prefix ui
+npm run dev --prefix ui
+```
+
+Open http://localhost:5173 and click **Try a sample submission**.
+
+### What to upload
+
+The quickest way to see ORION is to click **Try a sample submission** on the Upload tab.
+
+You can also upload your own files:
+- A `submission.json` plus its supporting documents (PDF, DOCX, XLSX, TXT), **or**
+- A single standalone document (PDF/DOCX/XLSX/TXT).
+
+The pipeline runs in the background. Once complete, the **Detail** tab shows the recommendation, why it was made, evidence excerpts, follow-up questions, and the Accept/Override controls. Decisions are recorded in the assessment list.
+
 ## The problem
 
 A compliance officer reviews 50 license applications every month. Each submission includes JSON metadata and 3–12 supporting documents (PDF policies, Excel financials, DOCX organizational charts, scanned IDs). The review must cover ownership transparency, AML controls, regulatory history, cybersecurity posture, financial health, privacy compliance, and politically exposed person (PEP) screening. Every decision needs a documented rationale, because regulators ask "why?" months later.
@@ -38,7 +77,7 @@ ORION cuts that to minutes and makes the reasoning explicit.
 | **Evidence verification** | Every evidence excerpt is checked against the ingested document text (case/whitespace-insensitive substring). Citations that don't match their named source are dropped with a warning — never replaced with invented ones. |
 | **Explicit delivery status** | Every result and audit record carries `delivery: {status: success|failed|skipped, detail}`. Set `REVIEW_API_URL=""` to skip delivery; the default httpbin URL keeps the CLI demoable. Delivery failures are recorded, never silently swallowed. |
 | **Ingestion honesty** | The audit record carries `ingest: {truncated_docs, total_budget_trimmed}` so a reviewer can see when evidence may be incomplete. Char budgets unchanged (12k/doc, 48k total). |
-| **Durable review store** | Latest assessment per submission is dual-written to SQLite (`ORION_DB_PATH`, default `data/orion.db`) alongside `audit.jsonl`. Reviewer accepts/overrides persist via a thin FastAPI surface (`api.py`): `GET /health`, `GET /assessments/{id}`, `POST /assessments/{id}/review`. Set `ORION_API_KEY` to require `Authorization: Bearer <key>` or `X-API-Key` on assessment routes; unset keeps open local access. `/health` stays open. |
+| **Durable review store** | Latest assessment per submission is dual-written to SQLite (`ORION_DB_PATH`, default `data/orion.db`) alongside `audit.jsonl`. Reviewer accepts/overrides persist via a thin FastAPI surface (`api.py`): `GET /health`, `GET /assessments`, `POST /assessments`, `GET /assessments/{id}`, `POST /assessments/{id}/review`. `POST /assessments` accepts a local path or uploaded files and starts an async pipeline run; the UI polls until it completes. Set `ORION_API_KEY` to require `Authorization: Bearer <key>` or `X-API-Key` on assessment routes; unset keeps open local access. `/health` stays open. |
 | **Pydantic v2 schema** | Output contract validated before any result leaves the pipeline. `ReviewerOverride` cross-field validators enforce that overridden decisions include a reviewer ID and new level. |
 | **Evidence attribution** | Each risk dimension classification includes a source document name and verbatim excerpt justifying it. Stored in the audit log, part of the pipeline output. |
 | **Standalone document mode** | No JSON wrapper required. Point the pipeline at any `.pdf`, `.docx`, `.xlsx`, or `.txt` and it auto-wraps it into a submission. |
@@ -117,7 +156,9 @@ Composite scores land inside the labelers' expected ranges less often (9/20) —
 - `audit.py` — append-only JSONL audit records with input hash, commit SHA, model fingerprint, prompt hash, delivery outcome, ingest flags
 - `deliver.py` — POST results to external review API with 4-retry exponential backoff and idempotency keys; explicit success/failed/skipped outcomes
 - `db.py` — thin SQLite layer: latest assessment per submission + persisted reviewer decisions
-- `api.py` — minimal FastAPI surface over the store (`GET /health`, `GET /assessments/{id}`, `POST /assessments/{id}/review`)
+- `api.py` — minimal FastAPI surface over the store (`GET /health`, `GET /assessments`, `POST /assessments`, `GET /assessments/{id}`, `POST /assessments/{id}/review`)
+- `ui/` — minimal Vite + React reviewer UI (upload, queue, assessment detail, accept/override)
+- `docker-compose.yml` — one-command local API + UI
 - `evaluate.py` — batch evaluation harness with accuracy report and confusion breakdown
 
 **Other**
@@ -145,9 +186,24 @@ python main.py
 # Serverless entrypoint
 python handler.py '{"submission_id":"fc3e4000"}'
 
-# HTTP surface for assessments + reviews (optional)
+# HTTP surface for assessments + reviews
 # Set ORION_API_KEY in .env to require Bearer / X-API-Key on assessment routes
 uvicorn api:app --reload
+```
+
+### Reviewer UI
+
+```bash
+npm install --prefix ui
+npm run dev --prefix ui
+# UI runs on http://localhost:5173 and proxies /api to the ORION backend.
+```
+
+The UI is a minimal Vite + React single-page app. Configure the API URL and optional key via environment variables:
+
+```bash
+VITE_API_URL=http://localhost:8000  # default /api in dev, proxied by Vite
+VITE_API_KEY=your-secret            # only if ORION_API_KEY is set
 ```
 
 ## Tests
@@ -161,6 +217,17 @@ Runs in CI on every push via GitHub Actions.
 Covers: `score_profile` (all four authorization paths, criminal-flag override, missing-doc penalty, composite clamping, fail-closed unknown values), `get_authorization_level` (threshold boundaries, hard-rule overrides), `ReviewerOverride` validators (ACCEPTED requires reviewer_id, OVERRIDDEN requires both reviewer_id and override_level), `RiskProfile` enum rejection for all five categorical dimensions, `Evidence` citation parsing + verification (basename / ambiguous source matching), optional API key auth, and pipeline order (verify evidence before `RiskProfile` validation).
 
 ## Docker
+
+### Full reviewer stack (API + UI)
+
+```bash
+docker-compose up --build
+```
+
+API: http://localhost:8000  
+UI: http://localhost:5173
+
+### Pipeline container only
 
 ```bash
 docker build -t orion-pipeline .

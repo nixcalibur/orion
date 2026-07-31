@@ -115,6 +115,7 @@ class AssessmentResult(BaseModel):
     key_findings: List[str] = []
     review: Optional[ReviewerOverride] = None
     delivery: Optional[DeliveryInfo] = None
+    ingest: Optional[Dict] = None  # ingest metadata (truncations, budget trims)
 
     @field_validator("composite_score", mode="after")
     @classmethod

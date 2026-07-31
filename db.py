@@ -100,3 +100,25 @@ def get_review(submission_id: str) -> dict | None:
     except Exception as e:
         log.error(f"Failed to read review for '{submission_id}': {e}")
         return None
+
+
+def list_assessments() -> list[dict]:
+    """Return the latest assessment for every submission, newest first."""
+    try:
+        with _connect() as conn:
+            rows = conn.execute(
+                "SELECT submission_id, result_json FROM assessments ORDER BY assessed_at DESC"
+            ).fetchall()
+        results = []
+        for submission_id, result_json in rows:
+            try:
+                result = json.loads(result_json)
+            except Exception as e:
+                log.error(f"Failed to parse stored result for '{submission_id}': {e}")
+                continue
+            result["submission_id"] = submission_id
+            results.append(result)
+        return results
+    except Exception as e:
+        log.error(f"Failed to list assessments: {e}")
+        return []

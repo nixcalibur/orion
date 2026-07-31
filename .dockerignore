@@ -6,3 +6,5 @@ __pycache__/
 .pytest_cache/
 .claude/
 audit.jsonl
+ui/node_modules/
+ui/dist/

@@ -20,10 +20,27 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 
-def run_pipeline(submission_path):
+def run_pipeline(submission_path, on_stage=None):
+    """Run the ORION assessment pipeline.
+
+    Args:
+        submission_path: Path to a submission JSON or standalone document.
+        on_stage: Optional callback(stage_name) invoked at coarse pipeline stages
+                  (starting, ingest, extract, score, deliver, complete/error).
+                  Useful for progress UI without changing pipeline logic.
+    """
+    def _stage(name):
+        if on_stage:
+            try:
+                on_stage(name)
+            except Exception:
+                pass
+
+    _stage("starting")
     log.info(f"Starting ORION pipeline for: {submission_path}")
 
     # 1. Ingest submission + documents
+    _stage("ingest")
     submission, docs, ingest_meta = ingest(submission_path)
     log.info(
         f"Loaded submission '{submission['submission_id']}' "
@@ -31,6 +48,7 @@ def run_pipeline(submission_path):
     )
 
     # 2. Extract structured risk profile
+    _stage("extract")
     log.info("Extracting risk profile...")
     profile = extract_profile(submission, docs)
     if "error" in profile:
@@ -47,6 +65,7 @@ def run_pipeline(submission_path):
             status="error",
             ingest_meta=ingest_meta,
         )
+        _stage("error")
         return None
     log.info(f"Profile: {json.dumps(profile)}")
 
@@ -73,9 +92,11 @@ def run_pipeline(submission_path):
             status="error",
             ingest_meta=ingest_meta,
         )
+        _stage("error")
         return None
 
     # 4. Score dimensions and compute composite
+    _stage("score")
     dim_scores, composite = score_profile(profile)
     authorization = get_authorization_level(composite, profile)
     log.info(f"Composite score: {composite} → {authorization}")
@@ -104,10 +125,12 @@ def run_pipeline(submission_path):
         followup_questions=questions,
         key_findings=profile.get("key_findings", []),
         review=ReviewerOverride(status=ReviewStatus.PENDING),
+        ingest=ingest_meta,
     )
     log.info("Output validated against schema")
 
     # 8. Deliver to external review API — outcome is explicit, never assumed
+    _stage("deliver")
     input_hash = _hash_inputs(submission, docs)
     try:
         outcome = deliver(result.model_dump_json(), submission_id=submission["submission_id"], input_hash=input_hash)
@@ -135,6 +158,7 @@ def run_pipeline(submission_path):
     )
 
     # 10. Persist latest assessment (dual-write with audit.jsonl; never fatal)
+    _stage("complete")
     store_assessment(
         submission["submission_id"],
         result.assessed_at.isoformat(),

@@ -62,3 +62,21 @@ def test_delivery_info_schema():
     assert info.status.value == "skipped"
     dumped = info.model_dump()
     assert dumped["status"] == "skipped"
+
+
+def test_deliver_fails_fast_when_max_attempts_is_one(monkeypatch):
+    """ORION_DELIVERY_MAX_ATTEMPTS=1 should attempt once and not retry."""
+    import importlib
+    monkeypatch.setenv("REVIEW_API_URL", "https://example.com/review")
+    monkeypatch.setenv("ORION_DELIVERY_MAX_ATTEMPTS", "1")
+    importlib.reload(deliver_module)
+    attempts = []
+
+    def _raise_once(*args, **kwargs):
+        attempts.append(1)
+        raise urllib.error.HTTPError("https://example.com", 503, "Unavailable", {}, None)
+
+    monkeypatch.setattr(urllib.request, "urlopen", _raise_once)
+    with pytest.raises(deliver_module.DeliveryError):
+        deliver_module.deliver("{}", submission_id="x", input_hash="y")
+    assert len(attempts) == 1

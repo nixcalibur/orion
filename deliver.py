@@ -11,9 +11,11 @@ log = logging.getLogger(__name__)
 # Demo default keeps the CLI usable out of the box. Set REVIEW_API_URL="" to skip.
 DEFAULT_REVIEW_API_URL = "https://httpbin.org/post"
 
-# Retry config
-MAX_ATTEMPTS = 4
-BACKOFF_BASE = 1.5   # seconds; delay = BACKOFF_BASE * 2^attempt
+# Retry config — tunable via env so the API/UI can fail fast while the serverless
+# handler can keep a longer retry policy.
+MAX_ATTEMPTS = int(os.getenv("ORION_DELIVERY_MAX_ATTEMPTS", "4"))
+BACKOFF_BASE = float(os.getenv("ORION_DELIVERY_BACKOFF_BASE", "1.5"))  # seconds; delay = BACKOFF_BASE * 2^attempt
+REQUEST_TIMEOUT = float(os.getenv("ORION_DELIVERY_TIMEOUT", "10"))
 
 # HTTP status codes that are transient and worth retrying
 RETRIABLE_STATUSES = {429, 500, 502, 503, 504}
@@ -58,7 +60,7 @@ def deliver(result_json: str, submission_id: str = "", input_hash: str = "") -> 
         req = urllib.request.Request(url, data=data, headers=headers, method="POST")
 
         try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
                 status = resp.status
                 body = resp.read().decode("utf-8")
                 log.info(
@@ -86,9 +88,10 @@ def deliver(result_json: str, submission_id: str = "", input_hash: str = "") -> 
             )
             last_error = DeliveryError(f"Network error: {e.reason}", retriable=True)
 
-        delay = BACKOFF_BASE * (2 ** attempt)
-        log.info(f"Retrying delivery in {delay:.1f}s...")
-        time.sleep(delay)
+        if attempt < MAX_ATTEMPTS - 1:
+            delay = BACKOFF_BASE * (2 ** attempt)
+            log.info(f"Retrying delivery in {delay:.1f}s...")
+            time.sleep(delay)
 
     raise DeliveryError(
         f"Delivery failed after {MAX_ATTEMPTS} attempts: {last_error}",
