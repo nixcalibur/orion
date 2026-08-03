@@ -6,17 +6,29 @@ Auth (optional): set ORION_API_KEY to require Bearer / X-API-Key on assessment r
 Unset/empty keeps local open behavior. /health stays open.
 """
 
+import copy
 import json
 import os
+import re
 import shutil
 import tempfile
+import time
 import uuid
 from datetime import datetime, timezone
 from threading import Lock
 
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
 
-from db import get_assessment, get_review, list_assessments, store_review
+from db import (
+    get_assessment,
+    get_job,
+    get_review,
+    list_assessments,
+    store_job,
+    store_review,
+    update_job_status,
+)
+from ingest import _resolve_ref
 from main import run_pipeline
 from schema import ReviewerOverride, ReviewStatus
 
@@ -25,9 +37,124 @@ app = FastAPI(title="ORION API")
 # In-memory job tracker for async pipeline runs. SQLite remains the durable store.
 JOBS: dict[str, dict] = {}
 JOBS_LOCK = Lock()
+# Completed/error jobs are retained for this many minutes before cleanup.
+JOB_TTL_MINUTES = int(os.getenv("ORION_JOB_TTL_MINUTES", "60"))
 
 # Uploaded submissions are staged here, then passed to the pipeline by path.
 UPLOAD_DIR = os.getenv("ORION_UPLOAD_DIR", "uploads")
+# Maximum size for any uploaded file in bytes (default 50 MB).
+DEFAULT_MAX_UPLOAD_SIZE = 50 * 1024 * 1024
+
+
+def _safe_filename(filename: str | None) -> str:
+    """Strip path traversal and unsafe characters from uploaded filenames.
+
+    Returns a random UUID name if the filename is empty or entirely unsafe.
+    Enforces a 200-char limit to stay within common filesystem limits.
+    """
+    if not filename:
+        return f"{uuid.uuid4()}.bin"
+    base = os.path.basename(filename.replace("\\", "/"))
+    base = re.sub(r'[<>:"|?*\x00-\x1f]', "", base)
+    base = base.strip(". ")
+    if not base or base in {"..", "."}:
+        return f"{uuid.uuid4()}.bin"
+    if len(base) > 200:
+        name, ext = os.path.splitext(base)
+        base = name[: 200 - len(ext)] + ext if len(ext) < 200 else base[:200]
+    return base
+
+
+def _check_upload_size(doc: UploadFile):
+    """Reject uploads larger than ORION_MAX_UPLOAD_SIZE (default 50 MB).
+
+    Uses UploadFile.size if available; otherwise falls back to reading the file.
+    """
+    max_size = int(os.getenv("ORION_MAX_UPLOAD_SIZE", str(DEFAULT_MAX_UPLOAD_SIZE)))
+    if hasattr(doc, "size") and doc.size is not None:
+        size = doc.size
+    else:
+        # Fall back: read the whole file into memory. This is acceptable for the
+        # default size cap and the FastAPI test client.
+        doc.file.seek(0, os.SEEK_END)
+        size = doc.file.tell()
+        doc.file.seek(0)
+    if size > max_size:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Upload exceeds maximum size of {max_size} bytes",
+        )
+
+
+def _cleanup_old_jobs():
+    """Remove completed/error jobs older than JOB_TTL_MINUTES."""
+    cutoff = time.time() - JOB_TTL_MINUTES * 60
+    stale = [sid for sid, job in JOBS.items() if job.get("updated_at", cutoff + 1) < cutoff]
+    for sid in stale:
+        JOBS.pop(sid, None)
+
+
+# Cleanup is throttled: run at most once per CLEANUP_INTERVAL on the write path.
+_LAST_CLEANUP = 0.0
+CLEANUP_INTERVAL = 60  # seconds
+
+
+def _update_job(submission_id: str, **kwargs):
+    """Update the in-memory job cache and durably persist it to SQLite."""
+    global _LAST_CLEANUP
+    now = time.time()
+    now_iso = datetime.now(timezone.utc).isoformat()
+    with JOBS_LOCK:
+        if now - _LAST_CLEANUP > CLEANUP_INTERVAL:
+            _cleanup_old_jobs()
+            _LAST_CLEANUP = now
+        job = JOBS.get(submission_id, {})
+        job.update(kwargs)
+        job["updated_at"] = now
+        JOBS[submission_id] = job
+
+    # Durable mirror. Timing is merged; other fields overwrite.
+    timing = job.get("timing")
+    try:
+        update_job_status(
+            submission_id,
+            status=job.get("status"),
+            stage=job.get("stage"),
+            detail=job.get("detail"),
+            timing=timing,
+        )
+    except Exception:
+        # Never let the DB mirror break the API response path.
+        pass
+
+
+def _get_job(submission_id: str) -> dict | None:
+    """Return the current job, preferring the in-memory cache but falling back to SQLite.
+
+    Stale running jobs (no heartbeat longer than ORION_RUNNING_JOB_TIMEOUT_MINUTES)
+    are marked as error so restarts do not leave assessments stuck in 'running'.
+    """
+    with JOBS_LOCK:
+        job = JOBS.get(submission_id)
+    if job:
+        return job
+    job = get_job(submission_id)
+    if job is None:
+        return None
+    if job.get("status") == "running":
+        timeout_min = int(os.getenv("ORION_RUNNING_JOB_TIMEOUT_MINUTES", "10"))
+        updated = job.get("updated_at")
+        if updated:
+            try:
+                from datetime import datetime as _dt
+                updated_ts = _dt.fromisoformat(updated).timestamp()
+            except Exception:
+                updated_ts = 0
+            if time.time() - updated_ts > timeout_min * 60:
+                detail = f"No job heartbeat for {timeout_min} minutes (process may have restarted)."
+                _update_job(submission_id, status="error", stage="error", detail=detail)
+                return JOBS.get(submission_id, {**job, "status": "error", "detail": detail})
+    return job
 
 
 def _check_api_key(
@@ -125,9 +252,9 @@ def _format_assessment(result: dict) -> dict:
         warnings.append("External delivery was skipped.")
 
     review = result.get("review") or {}
-    review_status = review.get("status", "PENDING")
+    review_status = "STALE" if review.get("stale") else review.get("status", "PENDING")
 
-    formatted = dict(result)
+    formatted = copy.deepcopy(result)
     formatted["recommendation"] = level
     formatted["summary"] = _friendly_summary(level, score, findings, hard_overrides)
     formatted["top_concerns"] = top_concerns
@@ -135,25 +262,40 @@ def _format_assessment(result: dict) -> dict:
     formatted["followup_questions"] = followups
     formatted["warnings"] = warnings
     formatted["review_status"] = review_status
+    # Visible product differentiator: show when mandatory rules drove the outcome.
+    formatted["fail_closed_reasons"] = hard_overrides
     return formatted
 
 
 def _run_pipeline_job(path: str, submission_id: str):
-    """Background worker: run ORION pipeline and update the in-memory job record."""
+    """Background worker: run ORION pipeline and durably track job state + timing."""
+    started_at = time.time()
+    timing = {"started_at": datetime.now(timezone.utc).isoformat(), "stages": []}
+    _update_job(submission_id, status="running", stage="starting", timing=timing)
+
     def on_stage(stage: str):
-        with JOBS_LOCK:
-            JOBS[submission_id] = {"status": "running", "stage": stage}
+        elapsed_ms = int((time.time() - started_at) * 1000)
+        timing["stages"].append({"stage": stage, "elapsed_ms": elapsed_ms})
+        _update_job(submission_id, status="running", stage=stage, timing=timing)
 
     try:
         result = run_pipeline(path, on_stage=on_stage)
-        with JOBS_LOCK:
-            if result is None:
-                JOBS[submission_id] = {"status": "error", "detail": "Pipeline returned no result"}
-            else:
-                JOBS[submission_id] = {"status": "complete", "submission_id": submission_id}
+        timing["completed_at"] = datetime.now(timezone.utc).isoformat()
+        timing["total_ms"] = int((time.time() - started_at) * 1000)
+        if result is None:
+            _update_job(
+                submission_id,
+                status="error",
+                stage="error",
+                detail="Pipeline returned no result",
+                timing=timing,
+            )
+        else:
+            _update_job(submission_id, status="complete", stage="complete", timing=timing)
     except Exception as e:
-        with JOBS_LOCK:
-            JOBS[submission_id] = {"status": "error", "detail": str(e)}
+        timing["completed_at"] = datetime.now(timezone.utc).isoformat()
+        timing["total_ms"] = int((time.time() - started_at) * 1000)
+        _update_job(submission_id, status="error", stage="error", detail=str(e), timing=timing)
 
 
 def _save_uploaded_submission(submission_file: UploadFile, docs: list[UploadFile]) -> str:
@@ -161,6 +303,7 @@ def _save_uploaded_submission(submission_file: UploadFile, docs: list[UploadFile
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     workdir = tempfile.mkdtemp(prefix="orion_upload_", dir=UPLOAD_DIR)
 
+    _check_upload_size(submission_file)
     sub_path = os.path.join(workdir, "submission.json")
     with open(sub_path, "wb") as f:
         shutil.copyfileobj(submission_file.file, f)
@@ -168,24 +311,38 @@ def _save_uploaded_submission(submission_file: UploadFile, docs: list[UploadFile
     with open(sub_path, "r", encoding="utf-8") as f:
         submission = json.load(f)
 
+    # Map the raw uploaded basename to its sanitized saved name so document_refs
+    # that referenced the original name still resolve to the staged copy.
+    raw_to_saved: dict[str, str] = {}
     saved_doc_names = []
+    used_names = {"submission.json"}
     for doc in docs:
-        name = doc.filename or str(uuid.uuid4())
+        _check_upload_size(doc)
+        name = _safe_filename(doc.filename)
+        # Guard against duplicate sanitized names in the same upload.
+        if name in used_names:
+            name = f"{uuid.uuid4()}_{name}"
+        used_names.add(name)
         dest = os.path.join(workdir, name)
         with open(dest, "wb") as f:
             shutil.copyfileobj(doc.file, f)
+        raw_base = os.path.basename((doc.filename or "").replace("\\", "/"))
+        if raw_base:
+            raw_to_saved[raw_base] = name
         saved_doc_names.append(name)
 
-    # If the uploaded JSON already has document_refs, keep them as basenames so
-    # they resolve to the staged directory.
+    # Rewrite document_refs to the sanitized saved names so they resolve to the
+    # staged directory. Unuploaded refs keep their basename (the pipeline will
+    # mark them MISSING, as before).
     if submission.get("document_refs"):
         submission["document_refs"] = [
-            os.path.basename(ref) for ref in submission["document_refs"]
+            raw_to_saved.get(os.path.basename(ref.replace("\\", "/")), os.path.basename(ref))
+            for ref in submission["document_refs"]
         ]
     # If docs were uploaded but not referenced, append them.
     existing = set(submission.get("document_refs", []))
     for name in saved_doc_names:
-        if name != "submission.json" and name not in existing:
+        if name not in existing:
             submission.setdefault("document_refs", []).append(name)
 
     with open(sub_path, "w", encoding="utf-8") as f:
@@ -198,7 +355,8 @@ def _save_standalone_doc(doc: UploadFile) -> str:
     """Stage a single standalone document and return its path."""
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     workdir = tempfile.mkdtemp(prefix="orion_upload_", dir=UPLOAD_DIR)
-    name = doc.filename or f"{uuid.uuid4()}.txt"
+    _check_upload_size(doc)
+    name = _safe_filename(doc.filename)
     dest = os.path.join(workdir, name)
     with open(dest, "wb") as f:
         shutil.copyfileobj(doc.file, f)
@@ -212,8 +370,13 @@ def _save_multi_docs_as_submission(docs: list[UploadFile]) -> str:
     submission_id = os.path.basename(workdir).replace("orion_upload_", "")
     sub_path = os.path.join(workdir, "submission.json")
     doc_names = []
+    used_names = set()
     for doc in docs:
-        name = doc.filename or str(uuid.uuid4())
+        _check_upload_size(doc)
+        name = _safe_filename(doc.filename)
+        if name in used_names:
+            name = f"{uuid.uuid4()}_{name}"
+        used_names.add(name)
         dest = os.path.join(workdir, name)
         with open(dest, "wb") as f:
             shutil.copyfileobj(doc.file, f)
@@ -243,15 +406,19 @@ def create_assessment(
     - docs only: a single standalone document, or multiple loose documents
     """
     if path:
-        run_path = path
-        if path.lower().endswith(".json"):
+        # Reject paths that escape the configured docs directory.
+        try:
+            run_path = _resolve_ref(path)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid path: {e}")
+        if run_path.lower().endswith(".json"):
             try:
-                with open(path, "r", encoding="utf-8") as f:
-                    submission_id = json.load(f).get("submission_id") or os.path.splitext(os.path.basename(path))[0]
+                with open(run_path, "r", encoding="utf-8") as f:
+                    submission_id = json.load(f).get("submission_id") or os.path.splitext(os.path.basename(run_path))[0]
             except Exception:
-                submission_id = os.path.splitext(os.path.basename(path))[0]
+                submission_id = os.path.splitext(os.path.basename(run_path))[0]
         else:
-            submission_id = os.path.splitext(os.path.basename(path))[0]
+            submission_id = os.path.splitext(os.path.basename(run_path))[0]
     elif submission:
         if not docs:
             raise HTTPException(status_code=400, detail="At least one supporting document is required with submission.json")
@@ -275,16 +442,41 @@ def create_assessment(
     else:
         raise HTTPException(status_code=400, detail="Provide 'path' or upload 'submission'/'docs'")
 
-    with JOBS_LOCK:
-        JOBS[submission_id] = {"status": "running", "stage": "starting"}
+    _update_job(submission_id, status="running", stage="starting")
     background_tasks.add_task(_run_pipeline_job, run_path, submission_id)
 
     return {"submission_id": submission_id, "status": "running", "stage": "starting"}
 
 
 @app.get("/assessments", dependencies=[Depends(_check_api_key)])
-def list_assessments_endpoint():
-    rows = list_assessments()
+def list_assessments_endpoint(
+    limit: int = 100,
+    offset: int = 0,
+    authorization_level: str | None = None,
+    review_status: str | None = None,
+):
+    """List assessments with pagination and optional filters.
+
+    - limit: 1–500 (default 100)
+    - offset: 0+ (default 0)
+    - authorization_level: APPROVE | CONDITIONAL | DEFER | REJECT
+    - review_status: PENDING | ACCEPTED | OVERRIDDEN | STALE
+    """
+    if limit < 1 or limit > 500:
+        raise HTTPException(status_code=400, detail="limit must be between 1 and 500")
+    if offset < 0:
+        raise HTTPException(status_code=400, detail="offset must be >= 0")
+    if authorization_level and authorization_level not in ("APPROVE", "CONDITIONAL", "DEFER", "REJECT"):
+        raise HTTPException(status_code=400, detail="invalid authorization_level")
+    if review_status and review_status not in ("PENDING", "ACCEPTED", "OVERRIDDEN", "STALE"):
+        raise HTTPException(status_code=400, detail="invalid review_status")
+
+    rows = list_assessments(
+        limit=limit,
+        offset=offset,
+        authorization_level=authorization_level,
+        review_status=review_status,
+    )
     return [
         {
             "submission_id": r["submission_id"],
@@ -292,7 +484,8 @@ def list_assessments_endpoint():
             "authorization_level": r.get("authorization_level"),
             "composite_score": r.get("composite_score"),
             "assessed_at": r.get("assessed_at"),
-            "review_status": (r.get("review") or {}).get("status", "PENDING"),
+            "review_status": ("STALE" if (r.get("review") or {}).get("stale")
+                              else (r.get("review") or {}).get("status", "PENDING")),
             "reviewer_id": (r.get("review") or {}).get("reviewer_id"),
             "reviewed_at": (r.get("review") or {}).get("reviewed_at"),
         }
@@ -303,11 +496,16 @@ def list_assessments_endpoint():
 @app.get("/assessments/{submission_id}", dependencies=[Depends(_check_api_key)])
 def read_assessment(submission_id: str):
     # If the pipeline is still running or has failed, return the live job status.
-    with JOBS_LOCK:
-        job = JOBS.get(submission_id)
+    # The durable DB record is the source of truth, with an in-memory cache for
+    # fast polling; _get_job handles both and detects stale running jobs.
+    job = _get_job(submission_id)
     if job:
         if job.get("status") == "running":
-            return {"submission_id": submission_id, "status": "running", "stage": job.get("stage", "starting")}
+            return {
+                "submission_id": submission_id,
+                "status": "running",
+                "stage": job.get("stage", "starting"),
+            }
         if job.get("status") == "error":
             return {
                 "submission_id": submission_id,
@@ -333,5 +531,8 @@ def submit_review(submission_id: str, review: ReviewerOverride):
         raise HTTPException(status_code=400, detail="status must be ACCEPTED or OVERRIDDEN")
     if review.reviewed_at is None:
         review.reviewed_at = datetime.now(timezone.utc)
-    store_review(submission_id, json.loads(review.model_dump_json()))
-    return json.loads(review.model_dump_json())
+    # mode="json" yields ISO-8601 strings (not datetime objects), so SQLite gets
+    # the same format the pipeline stores elsewhere and no adapter is required.
+    review_data = review.model_dump(mode="json")
+    store_review(submission_id, review_data)
+    return review_data

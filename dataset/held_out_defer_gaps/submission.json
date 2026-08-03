@@ -1,0 +1,27 @@
+{
+  "submission_id": "held_out_defer_gaps",
+  "applicant_name": "Cobalt Payments Group AD",
+  "jurisdiction": "Bulgaria",
+  "declared_activities": [
+    "payment institution",
+    "e-money"
+  ],
+  "incorporation_date": "2017-08-14",
+  "key_personnel": [
+    {
+      "name": "Dimitar Radev",
+      "role": "CEO",
+      "nationality": "BG"
+    },
+    {
+      "name": "Elena Vasileva",
+      "role": "Head of Compliance",
+      "nationality": "BG"
+    }
+  ],
+  "document_refs": [
+    "dataset/held_out_defer_gaps/docs/compliance_note.txt",
+    "dataset/held_out_defer_gaps/docs/ownership.txt",
+    "dataset/held_out_defer_gaps/docs/financials.txt"
+  ]
+}

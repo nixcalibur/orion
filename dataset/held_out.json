@@ -1,4 +1,17 @@
 {
-  "submission_ids": ["held_out_pep", "held_out_major"],
+  "submission_ids": [
+    "held_out_pep",
+    "held_out_major",
+    "held_out_healthcare",
+    "held_out_wealth",
+    "held_out_pep_edd",
+    "held_out_pep_noedd",
+    "held_out_opaque",
+    "held_out_defer_funding",
+    "held_out_defer_ops",
+    "held_out_defer_gaps",
+    "held_out_major2",
+    "held_out_criminal"
+  ],
   "note": "Synthetic packs reserved for held-out reporting. Not used to tune prompt wording."
 }

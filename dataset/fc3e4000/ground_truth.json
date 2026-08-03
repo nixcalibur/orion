@@ -2,8 +2,8 @@
   "submission_id": "fc3e4000",
   "expected_authorization_level": "DEFER",
   "expected_composite_range": [
-    6.0,
-    8.0
+    4.3,
+    5.3
   ],
   "profile": {
     "ownership": "complex",

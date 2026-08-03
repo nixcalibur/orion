@@ -1,0 +1,28 @@
+{
+  "submission_id": "held_out_healthcare",
+  "applicant_name": "Meridian Health Assurance FZE",
+  "jurisdiction": "United Arab Emirates",
+  "declared_activities": [
+    "health insurance",
+    "claims processing"
+  ],
+  "incorporation_date": "2018-03-15",
+  "key_personnel": [
+    {
+      "name": "Yasmin Al-Farsi",
+      "role": "CEO",
+      "nationality": "AE"
+    },
+    {
+      "name": "Daniel Okafor",
+      "role": "CFO",
+      "nationality": "NG"
+    }
+  ],
+  "document_refs": [
+    "dataset/held_out_healthcare/docs/aml_policy.txt",
+    "dataset/held_out_healthcare/docs/financials.txt",
+    "dataset/held_out_healthcare/docs/ownership.txt",
+    "dataset/held_out_healthcare/docs/controls.txt"
+  ]
+}

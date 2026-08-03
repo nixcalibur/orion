@@ -163,6 +163,7 @@ def run_pipeline(submission_path, on_stage=None):
         submission["submission_id"],
         result.assessed_at.isoformat(),
         result.model_dump_json(),
+        input_hash=input_hash,
     )
 
     return result

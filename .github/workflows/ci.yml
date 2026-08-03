@@ -17,3 +17,21 @@ jobs:
         run: pip install -r requirements.txt pytest
       - name: Run tests
         run: pytest tests/ -v
+
+  # Offline end-to-end check: runs the whole pipeline with the deterministic
+  # mock LLM (no API key) and fails if held-out accuracy regresses below the
+  # floor. Catches broken manifests, schema/scoring changes, and eval-harness
+  # wiring without spending API credits.
+  mock-eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run mock evaluation with held-out floor
+        run: |
+          ORION_LLM_PROVIDER=mock ORION_EXTRACTION_VOTES=1 \
+          python evaluate.py --check-min-accuracy 0.75

@@ -1,0 +1,21 @@
+{
+  "expected_authorization_level": "DEFER",
+  "expected_composite_range": [
+    4.7,
+    5.7
+  ],
+  "profile": {
+    "ownership": "clear",
+    "aml_present": false,
+    "regulatory_history": "clean",
+    "cyber": "weak",
+    "financial_health": "distressed",
+    "privacy": "non_compliant",
+    "has_pep": false,
+    "has_criminal_flag": false,
+    "missing_docs": [
+      "AML/CFT policy",
+      "audited financials"
+    ]
+  }
+}

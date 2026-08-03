@@ -1,6 +1,9 @@
 {
   "expected_authorization_level": "REJECT",
-  "expected_composite_range": [8.0, 10.0],
+  "expected_composite_range": [
+    8.7,
+    9.7
+  ],
   "profile": {
     "ownership": "opaque",
     "aml_present": false,
@@ -10,6 +13,8 @@
     "privacy": "partial",
     "has_pep": false,
     "has_criminal_flag": false,
-    "missing_docs": ["AML policy"]
+    "missing_docs": [
+      "AML policy"
+    ]
   }
 }

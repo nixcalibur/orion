@@ -1,0 +1,6 @@
+Ironclad Trade Finance Ltd - Compliance Status Note
+
+An anti-money laundering framework is under development; the board approved a roadmap in Q1. No formal AML/CFT policy has been issued and MLRO recruitment is in progress.
+
+CYBER
+System hardening lags industry norms and no penetration testing has been performed.

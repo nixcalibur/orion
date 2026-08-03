@@ -2,8 +2,8 @@
   "submission_id": "771f242d",
   "expected_authorization_level": "REJECT",
   "expected_composite_range": [
-    8.0,
-    10.0
+    8.7,
+    9.7
   ],
   "profile": {
     "ownership": "opaque",

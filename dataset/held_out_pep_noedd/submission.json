@@ -1,0 +1,26 @@
+{
+  "submission_id": "held_out_pep_noedd",
+  "applicant_name": "Cascade Payments UAB",
+  "jurisdiction": "Lithuania",
+  "declared_activities": [
+    "payment processing"
+  ],
+  "incorporation_date": "2019-02-11",
+  "key_personnel": [
+    {
+      "name": "Marta Kowalczyk",
+      "role": "CFO",
+      "nationality": "PL"
+    },
+    {
+      "name": "Justas Petraitis",
+      "role": "CEO",
+      "nationality": "LT"
+    }
+  ],
+  "document_refs": [
+    "dataset/held_out_pep_noedd/docs/aml_policy.txt",
+    "dataset/held_out_pep_noedd/docs/financials.txt",
+    "dataset/held_out_pep_noedd/docs/ownership.txt"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "submission_id": "held_out_opaque",
+  "applicant_name": "Northwind Capital S.A.",
+  "jurisdiction": "Luxembourg",
+  "declared_activities": [
+    "asset management"
+  ],
+  "incorporation_date": "2014-09-30",
+  "key_personnel": [
+    {
+      "name": "Antoine Girard",
+      "role": "CEO",
+      "nationality": "FR"
+    },
+    {
+      "name": "Elena Rossi",
+      "role": "Head of Risk",
+      "nationality": "IT"
+    }
+  ],
+  "document_refs": [
+    "dataset/held_out_opaque/docs/ownership.txt",
+    "dataset/held_out_opaque/docs/aml_policy.txt",
+    "dataset/held_out_opaque/docs/financials.txt"
+  ]
+}

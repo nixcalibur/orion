@@ -1,0 +1,20 @@
+{
+  "expected_authorization_level": "CONDITIONAL",
+  "expected_composite_range": [
+    1.5,
+    2.5
+  ],
+  "profile": {
+    "ownership": "clear",
+    "aml_present": true,
+    "regulatory_history": "minor_issues",
+    "cyber": "adequate",
+    "financial_health": "healthy",
+    "privacy": "compliant",
+    "has_pep": true,
+    "has_criminal_flag": false,
+    "missing_docs": [
+      "penetration test report"
+    ]
+  }
+}

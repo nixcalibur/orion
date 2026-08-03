@@ -1,4 +1,0 @@
-.\mvnw.cmd spring-boot:run
-
-netstat -ano | findstr :8080
-taskkill /PID <PID(FAR RIGHT)> /f

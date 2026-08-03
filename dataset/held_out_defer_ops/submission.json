@@ -1,0 +1,27 @@
+{
+  "submission_id": "held_out_defer_ops",
+  "applicant_name": "Harbourline Settlement Ltd",
+  "jurisdiction": "Gibraltar",
+  "declared_activities": [
+    "settlement services",
+    "escrow"
+  ],
+  "incorporation_date": "2016-04-22",
+  "key_personnel": [
+    {
+      "name": "Sofia Lindqvist",
+      "role": "CEO",
+      "nationality": "SE"
+    },
+    {
+      "name": "Marco Silva",
+      "role": "COO",
+      "nationality": "PT"
+    }
+  ],
+  "document_refs": [
+    "dataset/held_out_defer_ops/docs/ownership.txt",
+    "dataset/held_out_defer_ops/docs/aml_policy.txt",
+    "dataset/held_out_defer_ops/docs/financials.txt"
+  ]
+}

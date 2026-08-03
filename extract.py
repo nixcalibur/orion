@@ -17,8 +17,12 @@ MODEL = "gpt-4o-mini-2024-07-18"
 SEED = 42
 _MAX_RETRIES = 3
 _RETRY_BASE_DELAY = 2  # seconds
+# ORION_LLM_PROVIDER=mock uses a deterministic offline extractor (no API key),
+# so the whole pipeline runs in CI and for local demos without credentials.
+_MOCK = os.getenv("ORION_LLM_PROVIDER", "openai").strip().lower() == "mock"
 # Number of extraction passes merged by majority vote. 1 = single-pass (old behavior).
-_VOTES = int(os.getenv("ORION_EXTRACTION_VOTES", "3"))
+# Mock passes are identical by design, so default mock runs to a single pass.
+_VOTES = int(os.getenv("ORION_EXTRACTION_VOTES", "1" if _MOCK else "3"))
 
 _client = None
 
@@ -36,6 +40,159 @@ def _get_client():
     if _client is None:
         _client = OpenAI()
     return _client
+
+
+class _MockResponse:
+    """Shape-compatible stand-in for an OpenAI chat completion response."""
+    model = "mock-llm-v1"
+    system_fingerprint = "fp_mock"
+
+
+def _find_excerpt(docs, *terms):
+    """Return a verbatim window from the first document that contains a term.
+
+    The window is a raw substring of the document text, so excerpts always
+    survive evidence verification. Returns (excerpt, source_document) or
+    (None, None).
+    """
+    for name, content in docs.items():
+        lower = content.lower()
+        for term in terms:
+            idx = lower.find(term.lower())
+            if idx != -1:
+                start = max(0, idx - 60)
+                end = min(len(content), idx + len(term) + 60)
+                return content[start:end].strip(), name
+    return None, None
+
+
+def _negation_free(text, term):
+    """True if `term` appears in `text` without a negation in its sentence.
+
+    Sentence-level check handles list negations like "No prior investigations,
+    fines, or enforcement actions" and "No politically exposed persons have been
+    identified", which a local pre-window check would miss.
+    """
+    idx = 0
+    while True:
+        idx = text.find(term, idx)
+        if idx == -1:
+            return False
+        start = max(text.rfind(s, 0, idx) for s in (".", "!", "?")) + 1
+        end = text.find(".", idx)
+        if end == -1:
+            end = len(text)
+        sentence = text[start:end].lower()
+        if not any(n in sentence for n in ("no ", "not ", "none", "never", "without")):
+            return True
+        idx += len(term)
+
+
+def _mock_profile(submission, docs):
+    """Deterministic offline extractor used when ORION_LLM_PROVIDER=mock.
+
+    Deliberately simple keyword heuristics over the document text. Produces
+    schema-valid values and verbatim evidence excerpts so the rest of the
+    pipeline (verify_evidence → validate → score) runs unchanged and offline.
+    """
+    joined = " ".join("\n".join(docs.values()).split()).lower()
+
+    def has(*terms):
+        return any(_negation_free(joined, t) for t in terms)
+
+    # ownership
+    if has("beneficiaries undisclosed", "ubo chain unresolved", "unresolved"):
+        ownership = "opaque"
+    elif has("trust", "holding company", "holding entity", "nominee"):
+        ownership = "complex"
+    else:
+        ownership = "clear"
+
+    aml_present = has("aml") and has("policy")
+
+    if has("sanctions", "enforcement action", "suspension", "revocation",
+           "ongoing investigation", "criminal referral"):
+        regulatory_history = "major_issues"
+    elif has("administrative warning", "administrative fee", "fine", "remediation"):
+        regulatory_history = "minor_issues"
+    else:
+        regulatory_history = "clean"
+
+    if has("penetration test", "iso 27001", "soc 2"):
+        cyber = "strong"
+    elif has("cyber", "it security", "it controls"):
+        cyber = "adequate"
+    else:
+        cyber = "weak"
+
+    if has("negative equity", "liquidity concern", "going concern"):
+        financial_health = "distressed"
+    elif has("stress", "headroom"):
+        financial_health = "marginal"
+    elif has("positive equity", "capital ratio", "capital adequacy"):
+        financial_health = "healthy"
+    else:
+        financial_health = "marginal"
+
+    if has("gdpr", "data protection") and has("dpia") and has("dpo"):
+        privacy = "compliant"
+    elif has("gdpr", "data protection"):
+        privacy = "partial"
+    else:
+        privacy = "non_compliant"
+
+    # PEP: use specific phrases so headers like "PEP SCREENING" don't trigger,
+    # and negation handles "no politically exposed persons identified".
+    has_pep = has("politically exposed person", "treated as a pep", "is a pep",
+                  "identified as a pep")
+    has_criminal_flag = has("criminal history", "criminal record", "criminal referral")
+
+    missing = []
+    if not aml_present:
+        missing.append("AML/CFT policy")
+    if not has("mlro", "money laundering reporting officer"):
+        missing.append("MLRO appointment letter")
+    if not has("ubo", "beneficial ownership", "beneficial owner"):
+        missing.append("UBO/beneficial ownership chart")
+    if not has("audited"):
+        missing.append("audited financials")
+    if not has("penetration test"):
+        missing.append("penetration test report")
+    if has_pep and not has("edd", "enhanced due diligence", "source of wealth"):
+        missing.append("PEP enhanced due diligence evidence")
+
+    profile = {
+        "ownership": ownership,
+        "aml_present": aml_present,
+        "regulatory_history": regulatory_history,
+        "cyber": cyber,
+        "financial_health": financial_health,
+        "privacy": privacy,
+        "has_pep": has_pep,
+        "has_criminal_flag": has_criminal_flag,
+        "missing_docs": missing,
+        "activities_verified": [],
+        "activities_undeclared": [],
+        "key_findings": [],
+    }
+
+    evidence = {}
+    candidates = {
+        "ownership": ("ownership", "beneficial owner", "ubo", "shareholding"),
+        "aml_present": ("aml", "anti-money laundering"),
+        "regulatory_history": ("regulatory", "administrative", "sanction"),
+        "cyber": ("cyber", "penetration test", "it security"),
+        "financial_health": ("equity", "capital", "financial"),
+        "privacy": ("gdpr", "data protection", "dpia"),
+        "has_pep": ("politically exposed", "treated as a pep", "pep"),
+        "has_criminal_flag": ("criminal", "sanction"),
+    }
+    for dim, terms in candidates.items():
+        excerpt, source = _find_excerpt(docs, *terms)
+        if excerpt:
+            evidence[dim] = {"source_document": source, "excerpt": excerpt}
+    profile["evidence"] = evidence
+    return profile
 
 
 def _vote_scalar(field, values):
@@ -72,9 +229,15 @@ def _merge_profiles(profiles):
     return merged
 
 
-def _single_extraction(prompt, seed):
-    """One LLM call with retries on transient errors.
-    Returns (profile_dict, response) or ({"error": ...}, None)."""
+def _single_extraction(prompt, seed, submission=None, docs=None):
+    """One extraction pass.
+
+    With ORION_LLM_PROVIDER=mock, returns the deterministic offline profile.
+    Otherwise makes an LLM call with retries on transient errors.
+    Returns (profile_dict, response) or ({"error": ...}, None).
+    """
+    if _MOCK:
+        return _mock_profile(submission, docs), _MockResponse()
     for attempt in range(_MAX_RETRIES):
         try:
             response = _get_client().chat.completions.create(
@@ -227,7 +390,7 @@ def extract_profile(submission, docs):
     for i in range(_VOTES):
         # Distinct seed per pass so votes are independent draws, not identical copies
         seed = SEED + i
-        result, response = _single_extraction(prompt, seed)
+        result, response = _single_extraction(prompt, seed, submission, docs)
         if "error" in result:
             last_error = result
             log.warning(f"Extraction pass {i + 1}/{_VOTES} failed: {result['error']}")

@@ -1,0 +1,26 @@
+{
+  "submission_id": "held_out_criminal",
+  "applicant_name": "Delta Kredit a.d.",
+  "jurisdiction": "Serbia",
+  "declared_activities": [
+    "consumer credit"
+  ],
+  "incorporation_date": "2015-01-19",
+  "key_personnel": [
+    {
+      "name": "Milica Jovanovic",
+      "role": "CEO",
+      "nationality": "RS"
+    },
+    {
+      "name": "Nenad Ilic",
+      "role": "Director",
+      "nationality": "RS"
+    }
+  ],
+  "document_refs": [
+    "dataset/held_out_criminal/docs/aml_policy.txt",
+    "dataset/held_out_criminal/docs/financials.txt",
+    "dataset/held_out_criminal/docs/ownership.txt"
+  ]
+}

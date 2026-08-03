@@ -2,8 +2,8 @@
   "submission_id": "50f4e038",
   "expected_authorization_level": "CONDITIONAL",
   "expected_composite_range": [
-    4.0,
-    6.5
+    1.5,
+    2.5
   ],
   "profile": {
     "ownership": "clear",

@@ -1,0 +1,27 @@
+{
+  "submission_id": "held_out_pep_edd",
+  "applicant_name": "Belvedere Finance d.o.o.",
+  "jurisdiction": "Croatia",
+  "declared_activities": [
+    "consumer lending",
+    "payment services"
+  ],
+  "incorporation_date": "2015-05-20",
+  "key_personnel": [
+    {
+      "name": "Ivana Novak",
+      "role": "CEO",
+      "nationality": "HR"
+    },
+    {
+      "name": "Petar Horvat",
+      "role": "CFO",
+      "nationality": "HR"
+    }
+  ],
+  "document_refs": [
+    "dataset/held_out_pep_edd/docs/aml_policy.txt",
+    "dataset/held_out_pep_edd/docs/financials.txt",
+    "dataset/held_out_pep_edd/docs/ownership.txt"
+  ]
+}

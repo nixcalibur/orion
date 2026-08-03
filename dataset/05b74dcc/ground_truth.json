@@ -2,8 +2,8 @@
   "submission_id": "05b74dcc",
   "expected_authorization_level": "DEFER",
   "expected_composite_range": [
-    5.5,
-    8.0
+    5.1,
+    6.1
   ],
   "profile": {
     "ownership": "opaque",

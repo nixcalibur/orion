@@ -1,0 +1,28 @@
+{
+  "submission_id": "held_out_major2",
+  "applicant_name": "Atlas Clearing Services NV",
+  "jurisdiction": "Belgium",
+  "declared_activities": [
+    "clearing",
+    "settlement"
+  ],
+  "incorporation_date": "2012-12-01",
+  "key_personnel": [
+    {
+      "name": "Jan De Vries",
+      "role": "CEO",
+      "nationality": "BE"
+    },
+    {
+      "name": "Claire Dubois",
+      "role": "CFO",
+      "nationality": "BE"
+    }
+  ],
+  "document_refs": [
+    "dataset/held_out_major2/docs/aml_policy.txt",
+    "dataset/held_out_major2/docs/financials.txt",
+    "dataset/held_out_major2/docs/ownership.txt",
+    "dataset/held_out_major2/docs/regulatory.txt"
+  ]
+}

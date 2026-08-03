@@ -342,9 +342,19 @@ export default function App() {
               Recommendation <Badge value={current.recommendation} /> · risk score <span className="score-value">{current.composite_score}</span>
               <span className="hint" style={{ marginLeft: 8 }}>(0 = low risk, 10 = high risk)</span>
             </div>
+            <div className="hint" style={{ marginTop: 8, fontStyle: 'italic' }}>
+              AI extracts facts from the documents; deterministic rules compute the score; you make the final decision.
+            </div>
           </div>
           {decided && <Badge value={review.status} type="status" />}
         </div>
+
+        {(current.fail_closed_reasons?.length > 0) && (
+          <div className="warning" style={{ borderLeft: '4px solid #dc2626' }}>
+            <strong>Fail-closed rule matched:</strong> {current.fail_closed_reasons.join(', ')}.
+            This recommendation is driven by a mandatory rule, not the numeric score.
+          </div>
+        )}
 
         {current.warnings?.length > 0 && (
           <div>
@@ -367,6 +377,7 @@ export default function App() {
 
         <div className="card">
           <h2>Evidence</h2>
+          <p className="hint">Excerpts below were matched against the uploaded documents before being used.</p>
           {current.evidence_list?.length ? (
             current.evidence_list.map((e, i) => (
               <div key={i} className="evidence">

@@ -166,3 +166,47 @@ def test_prompt_contains_rubric_rules():
     assert "fully remediated" in prompt
     # prompt-injection isolation
     assert "<document>" in prompt
+
+
+# --- offline mock provider ---
+
+def test_mock_provider_produces_schema_valid_profile(monkeypatch):
+    import extract
+    monkeypatch.setattr(extract, "_MOCK", True)
+    docs = {
+        "policy.txt": "The AML/CFT Policy is in force and applies to all staff. "
+                      "The MLRO has been appointed. Beneficial owners are two natural persons.",
+        "financials.txt": "Audited accounts show positive equity and adequate capital.",
+    }
+    profile = extract.extract_profile({"submission_id": "x", "document_refs": list(docs)}, docs)
+    assert "error" not in profile
+    assert profile["_model"] == "mock-llm-v1"
+    from schema import RiskProfile
+    RiskProfile(**profile)  # must validate cleanly
+
+
+def test_mock_provider_evidence_verifies(monkeypatch):
+    import extract
+    monkeypatch.setattr(extract, "_MOCK", True)
+    docs = {"policy.txt": "The AML/CFT Policy applies to all staff and is in force."}
+    profile = extract.extract_profile({"submission_id": "x"}, docs)
+    verified = extract.verify_evidence(profile, docs)
+    for entry in verified["evidence"].values():
+        assert entry["source_document"] == "policy.txt"
+
+
+def test_mock_provider_requires_no_api_client(monkeypatch):
+    """Mock mode must not construct an OpenAI client."""
+    import extract
+    monkeypatch.setattr(extract, "_MOCK", True)
+    called = []
+
+    def boom():
+        called.append(True)
+        raise AssertionError("OpenAI() should not be constructed in mock mode")
+
+    monkeypatch.setattr(extract, "_client", None)
+    monkeypatch.setattr(extract, "OpenAI", boom)
+    profile = extract.extract_profile({"submission_id": "x"}, {"a.txt": "AML policy in force"})
+    assert "error" not in profile
+    assert not called

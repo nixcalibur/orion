@@ -1,14 +1,17 @@
 """Batch evaluation: predicted authorization level vs dataset ground truth.
 
 Usage: python evaluate.py
+       python evaluate.py --check-min-accuracy 0.75   # fail if held-out accuracy < floor
 
 Prints per-submission results, overall accuracy, in-sample vs held-out
 (if dataset/held_out.json is present), per-class accuracy,
 misclassification breakdown, and composite-range hit rate.
 """
 
+import argparse
 import json
 import os
+import sys
 from collections import Counter
 
 from ingest import ingest
@@ -27,12 +30,18 @@ def _load_held_out_ids():
     return set(data.get("submission_ids", []))
 
 
-def evaluate():
+def evaluate(check_min_accuracy: float | None = None, held_out_only: bool = False) -> int:
+    """Run the evaluation. Returns 0 on pass, 1 when a check floor is unmet."""
     results = []  # (sid, expected, got, composite, in_range, ok, held_out)
     confusion = Counter()
     held_out_ids = _load_held_out_ids()
 
-    for sid in sorted(os.listdir("dataset")):
+    sids = sorted(os.listdir("dataset"))
+    if held_out_only:
+        sids = [sid for sid in sids if sid in held_out_ids]
+        print(f"Held-out-only mode: {len(sids)} pack(s)\n")
+
+    for sid in sids:
         sub = f"dataset/{sid}/submission.json"
         gt_path = f"dataset/{sid}/ground_truth.json"
         if not os.path.exists(sub):
@@ -74,13 +83,14 @@ def evaluate():
 
     if not results:
         print("No submissions evaluated.")
-        return
+        return 1
 
     total = len(results)
     correct = sum(1 for r in results if r[5])
     print(f"\n=== Summary ===")
     print(f"Accuracy: {correct}/{total} ({correct / total * 100:.0f}%)")
 
+    held = []
     if held_out_ids:
         in_sample = [r for r in results if not r[6]]
         held = [r for r in results if r[6]]
@@ -117,8 +127,9 @@ def evaluate():
         hits = sum(1 for r in ranged if r[4])
         print(f"\nComposite within expected range: {hits}/{len(ranged)}")
         print(
-            "Note: composite-range mismatches are expected when human severity "
-            "intuition ≠ the deterministic formula — do not retune weights for that alone."
+            "Note: ranges are formula-consistent (see README), so a miss means the "
+            "extracted profile differs from the labeled profile - a fidelity signal, "
+            "not a human-vs-formula mismatch."
         )
 
     print(
@@ -126,6 +137,33 @@ def evaluate():
         "re-run after prompt edits. ORION_EXTRACTION_VOTES=1 for cheap smoke runs."
     )
 
+    if check_min_accuracy is not None:
+        if not held:
+            print("\nERROR: --check-min-accuracy requested but no held-out packs ran.")
+            return 1
+        held_correct = sum(1 for r in held if r[5])
+        held_acc = held_correct / len(held)
+        print(
+            f"\nGuardrail: held-out accuracy {held_acc:.0%} "
+            f"(floor {check_min_accuracy:.0%}) -> {'PASS' if held_acc >= check_min_accuracy else 'FAIL'}"
+        )
+        if held_acc < check_min_accuracy:
+            return 1
+    return 0
+
 
 if __name__ == "__main__":
-    evaluate()
+    parser = argparse.ArgumentParser(description="ORION batch evaluation")
+    parser.add_argument(
+        "--check-min-accuracy",
+        type=float,
+        default=None,
+        help="Fail (exit 1) when held-out accuracy is below this fraction",
+    )
+    parser.add_argument(
+        "--held-out-only",
+        action="store_true",
+        help="Evaluate only the packs listed in dataset/held_out.json",
+    )
+    args = parser.parse_args()
+    sys.exit(evaluate(check_min_accuracy=args.check_min_accuracy, held_out_only=args.held_out_only))

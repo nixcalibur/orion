@@ -1,0 +1,27 @@
+{
+  "submission_id": "held_out_defer_funding",
+  "applicant_name": "Ironclad Trade Finance Ltd",
+  "jurisdiction": "Malta",
+  "declared_activities": [
+    "trade finance",
+    "factoring"
+  ],
+  "incorporation_date": "2018-06-08",
+  "key_personnel": [
+    {
+      "name": "Lucas Borg",
+      "role": "CEO",
+      "nationality": "MT"
+    },
+    {
+      "name": "Chiara Vella",
+      "role": "Finance Director",
+      "nationality": "MT"
+    }
+  ],
+  "document_refs": [
+    "dataset/held_out_defer_funding/docs/compliance_note.txt",
+    "dataset/held_out_defer_funding/docs/financials.txt",
+    "dataset/held_out_defer_funding/docs/ownership.txt"
+  ]
+}

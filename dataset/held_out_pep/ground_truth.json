@@ -1,6 +1,9 @@
 {
   "expected_authorization_level": "CONDITIONAL",
-  "expected_composite_range": [4.0, 6.5],
+  "expected_composite_range": [
+    1.5,
+    2.5
+  ],
   "profile": {
     "ownership": "clear",
     "aml_present": true,
@@ -10,6 +13,8 @@
     "privacy": "compliant",
     "has_pep": true,
     "has_criminal_flag": false,
-    "missing_docs": ["PEP enhanced due diligence evidence"]
+    "missing_docs": [
+      "PEP enhanced due diligence evidence"
+    ]
   }
 }
